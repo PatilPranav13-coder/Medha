@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medha — AI Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ── Theme variables ── */
+:root{
+  --font-display:'DM Serif Display',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+  --font-mono:'DM Mono','Courier New',monospace;
+  --radius-sm:8px;
+  --radius:14px;
+  --radius-lg:20px;
+  --transition:.18s cubic-bezier(.4,0,.2,1);
+  --sidebar-w:260px;
+}
+[data-theme="dark"]{
+  --bg:#0c0e14;
+  --bg2:#13161f;
+  --bg3:#1c2030;
+  --bg4:#232840;
+  --border:#ffffff0f;
+  --border2:#ffffff18;
+  --text:#eef0f8;
+  --text2:#8b91b0;
+  --text3:#454d6e;
+  --accent:#6c8fff;
+  --accent-dim:#6c8fff22;
+  --accent2:#3a5ad6;
+  --gold:#e8c56d;
+  --green:#4ec994;
+  --red:#e86d6d;
+  --shadow:0 8px 32px #00000060;
+  --shadow-sm:0 2px 8px #00000040;
+}
+[data-theme="light"]{
+  --bg:#f5f4f0;
+  --bg2:#ffffff;
+  --bg3:#eeeceb;
+  --bg4:#e4e2df;
+  --border:#00000010;
+  --border2:#00000018;
+  --text:#1a1a2e;
+  --text2:#5a5f7a;
+  --text3:#a0a4b8;
+  --accent:#3a5ad6;
+  --accent-dim:#3a5ad620;
+  --accent2:#2244b8;
+  --gold:#c49a2a;
+  --green:#2a9e6a;
+  --red:#c44444;
+  --shadow:0 8px 32px #00000018;
+  --shadow-sm:0 2px 8px #00000010;
+}
+
+/* ── Base ── */
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:14px;
+  min-height:100vh;
+  display:flex;
+  overflow:hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar{
+  width:var(--sidebar-w);
+  min-width:var(--sidebar-w);
+  height:100vh;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  transition:transform var(--transition), width var(--transition);
+  z-index:100;
+  flex-shrink:0;
+}
+#sidebar.collapsed{
+  width:0;
+  min-width:0;
+  overflow:hidden;
+}
+
+/* Sidebar top */
+#sidebar-header{
+  padding:20px 16px 12px;
+  border-bottom:1px solid var(--border);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
+.brand-logo{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);
+  font-size:16px;color:#fff;
+  flex-shrink:0;
+}
+.brand-name{
+  font-family:var(--font-display);
+  font-size:20px;
+  color:var(--text);
+  letter-spacing:-.3px;
+}
+.brand-tag{
+  font-size:10px;
+  color:var(--accent);
+  background:var(--accent-dim);
+  padding:1px 7px;
+  border-radius:20px;
+  font-weight:500;
+  margin-left:auto;
+}
+#new-chat-btn{
+  width:100%;
+  padding:9px 14px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius-sm);
+  font-family:var(--font-body);
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  display:flex;align-items:center;gap:8px;
+  transition:background var(--transition),transform var(--transition);
+}
+#new-chat-btn:hover{background:var(--accent2);transform:translateY(-1px)}
+#new-chat-btn svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2}
+
+/* History list */
+#sidebar-history{
+  flex:1;
+  overflow-y:auto;
+  padding:12px 10px;
+}
+#sidebar-history::-webkit-scrollbar{width:2px}
+#sidebar-history::-webkit-scrollbar-thumb{background:var(--border2)}
+.history-section-label{
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--text3);
+  padding:4px 6px 6px;
+}
+.history-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  transition:background var(--transition);
+  position:relative;
+  margin-bottom:1px;
+}
+.history-item:hover{background:var(--bg3)}
+.history-item.active{background:var(--accent-dim);color:var(--accent)}
+.history-item svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0;color:var(--text3)}
+.history-item.active svg{color:var(--accent)}
+.hi-title{
+  font-size:12.5px;
+  color:var(--text2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;
+}
+.history-item.active .hi-title{color:var(--accent)}
+.hi-del{
+  width:18px;height:18px;
+  border:none;background:none;cursor:pointer;
+  color:var(--text3);display:none;align-items:center;justify-content:center;
+  border-radius:4px;flex-shrink:0;
+  transition:color var(--transition),background var(--transition);
+}
+.hi-del:hover{color:var(--red);background:var(--bg4)}
+.history-item:hover .hi-del{display:flex}
+.hi-del svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* Sidebar bottom nav */
+#sidebar-nav{
+  padding:10px;
+  border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:2px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  font-size:13px;
+  color:var(--text2);
+  border:none;background:none;width:100%;text-align:left;
+  font-family:var(--font-body);
+  transition:background var(--transition),color var(--transition);
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent)}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+
+/* ── Main area ── */
+#main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ── Top bar ── */
+#topbar{
+  height:54px;
+  display:flex;align-items:center;gap:10px;
+  padding:0 16px;
+  border-bottom:1px solid var(--border);
+  background:var(--bg);
+  flex-shrink:0;
+  backdrop-filter:blur(12px);
+}
+#toggle-sidebar{
+  width:32px;height:32px;
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);
+  transition:background var(--transition),color var(--transition);
+}
+#toggle-sidebar:hover{background:var(--bg3);color:var(--text)}
+#toggle-sidebar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+#page-title{
+  font-family:var(--font-display);
+  font-size:17px;
+  color:var(--text);
+  flex:1;
+}
+.topbar-actions{display:flex;gap:6px;align-items:center}
+.tbtn{
+  height:30px;padding:0 12px;
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  background:none;cursor:pointer;
+  font-size:12px;color:var(--text2);
+  font-family:var(--font-body);
+  display:flex;align-items:center;gap:6px;
+  transition:background var(--transition),color var(--transition);
+}
+.tbtn:hover{background:var(--bg3);color:var(--text)}
+.tbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+#theme-toggle{
+  width:30px;height:30px;padding:0;
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);
+  transition:background var(--transition),color var(--transition);
+}
+#theme-toggle:hover{background:var(--bg3);color:var(--text)}
+#theme-toggle svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ── Pages ── */
+.page{display:none;flex:1;flex-direction:column;overflow:hidden}
+.page.active{display:flex}
+
+/* ── Chat page ── */
+#page-chat{position:relative}
+#messages{
+  flex:1;overflow-y:auto;
+  padding:20px 0;
+  scroll-behavior:smooth;
+}
+#messages::-webkit-scrollbar{width:3px}
+#messages::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+.msg-wrap{
+  max-width:720px;
+  margin:0 auto;
+  padding:0 24px;
+  width:100%;
+}
+
+/* Welcome screen */
+#welcome{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;padding:40px 24px;
+  text-align:center;
+}
+#welcome-logo{
+  width:64px;height:64px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:20px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:32px;color:#fff;
+  margin-bottom:20px;
+  box-shadow:0 8px 32px var(--accent-dim);
+}
+#welcome h1{
+  font-family:var(--font-display);
+  font-size:32px;
+  color:var(--text);
+  margin-bottom:8px;
+}
+#welcome p{
+  font-size:15px;color:var(--text2);max-width:380px;margin-bottom:32px;line-height:1.6;
+}
+.welcome-chips{
+  display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:500px;
+}
+.chip{
+  padding:8px 16px;
+  border:1px solid var(--border2);
+  border-radius:20px;
+  background:var(--bg2);
+  color:var(--text2);font-size:12.5px;
+  cursor:pointer;
+  transition:all var(--transition);
+}
+.chip:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+
+/* Messages */
+.msg{
+  display:flex;gap:12px;
+  padding:6px 0;
+  align-items:flex-start;
+  animation:msgIn .2s ease;
+}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse}
+.mavatar{
+  width:30px;height:30px;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-size:12px;font-weight:600;
+  margin-top:2px;
+}
+.msg.ai .mavatar{
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;
+  font-family:var(--font-display);font-size:14px;
+}
+.msg.user .mavatar{
+  background:var(--bg3);
+  color:var(--text2);font-size:11px;
+}
+.msg-body{flex:1;min-width:0}
+.msg.user .msg-body{align-items:flex-end;display:flex;flex-direction:column}
+.bubble{
+  padding:11px 15px;
+  border-radius:var(--radius);
+  font-size:13.5px;line-height:1.7;
+  word-break:break-word;
+  max-width:100%;
+}
+.msg.ai .bubble{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--radius) var(--radius) var(--radius) 4px;
+  color:var(--text);
+}
+.msg.user .bubble{
+  background:var(--accent);
+  color:#fff;
+  border-radius:var(--radius) var(--radius) 4px var(--radius);
+  max-width:75%;
+}
+.msg-meta{
+  display:flex;align-items:center;gap:8px;
+  margin-top:4px;padding:0 2px;
+}
+.msg.user .msg-meta{justify-content:flex-end}
+.msg-ts{font-size:10px;color:var(--text3)}
+.copy-btn{
+  font-size:10px;padding:2px 8px;
+  border-radius:4px;border:1px solid var(--border2);
+  background:none;color:var(--text3);cursor:pointer;
+  display:none;
+  transition:all var(--transition);font-family:var(--font-body);
+}
+.copy-btn:hover{color:var(--text2);background:var(--bg3)}
+.msg.ai:hover .copy-btn{display:inline-block}
+
+/* Typing */
+.tdot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--text3);animation:tdot 1.2s infinite}
+.tdot:nth-child(2){animation-delay:.18s}
+.tdot:nth-child(3){animation-delay:.36s}
+@keyframes tdot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.stream-cursor{display:inline-block;width:2px;height:13px;background:var(--text2);margin-left:2px;vertical-align:middle;animation:blink .65s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Markdown in bubbles */
+.bubble p{margin:0 0 6px}
+.bubble p:last-child{margin:0}
+.bubble ul,.bubble ol{padding-left:20px;margin:4px 0}
+.bubble li{margin:3px 0}
+.bubble code{font-family:var(--font-mono);font-size:12px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px}
+.msg.user .bubble code{background:rgba(255,255,255,0.2)}
+.bubble pre{background:#0a0c12;border-radius:8px;padding:12px 14px;margin:8px 0;overflow-x:auto;border:1px solid var(--border)}
+[data-theme="light"] .bubble pre{background:#1a1d2e}
+.bubble pre code{background:none;padding:0;font-size:12px;color:#c9d1d9}
+.bubble strong{font-weight:600}
+.bubble em{font-style:italic;color:var(--text2)}
+.msg.user .bubble em{color:rgba(255,255,255,.8)}
+.bubble h2{font-size:15px;font-weight:600;margin:10px 0 5px;font-family:var(--font-display)}
+.bubble h3{font-size:13.5px;font-weight:600;margin:8px 0 4px}
+.bubble blockquote{border-left:2px solid var(--accent);padding-left:12px;margin:6px 0;color:var(--text2);font-style:italic}
+
+/* Suggestions strip */
+#suggestions{
+  padding:8px 0 0;
+  max-width:720px;margin:0 auto;width:100%;padding:8px 24px 0;
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.sug{
+  font-size:12px;padding:5px 12px;
+  border-radius:20px;border:1px solid var(--border2);
+  background:var(--bg2);color:var(--text2);cursor:pointer;
+  white-space:nowrap;font-family:var(--font-body);
+  transition:all var(--transition);
+}
+.sug:hover{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+
+/* Input row */
+#input-row{
+  padding:12px 24px;max-width:720px;margin:0 auto;width:100%;
+}
+.input-box{
+  display:flex;gap:8px;align-items:flex-end;
+  border:1px solid var(--border2);border-radius:var(--radius-lg);
+  padding:8px 8px 8px 16px;
+  background:var(--bg2);
+  transition:border-color var(--transition);
+}
+.input-box:focus-within{border-color:var(--accent)}
+#inp{
+  flex:1;resize:none;border:none;
+  padding:4px 0;font-size:13.5px;
+  font-family:var(--font-body);
+  color:var(--text);background:transparent;
+  max-height:110px;min-height:24px;
+  outline:none;line-height:1.5;
+}
+#inp::placeholder{color:var(--text3)}
+#sbtn{
+  width:34px;height:34px;
+  border-radius:50%;background:var(--accent);
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  transition:background var(--transition),transform var(--transition);
+}
+#sbtn:hover{background:var(--accent2);transform:scale(1.05)}
+#sbtn:disabled{background:var(--bg4);cursor:not-allowed;transform:none}
+#sbtn svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5}
+.input-hint{
+  text-align:center;font-size:10.5px;color:var(--text3);
+  padding:6px 0 2px;
+}
+
+/* ── Settings page ── */
+#page-settings{padding:0;overflow-y:auto}
+.settings-inner{max-width:640px;margin:0 auto;padding:32px 24px}
+.settings-inner h2{
+  font-family:var(--font-display);font-size:26px;margin-bottom:6px;
+}
+.settings-inner > p{color:var(--text2);font-size:13.5px;margin-bottom:28px}
+.settings-section{margin-bottom:28px}
+.settings-section h3{
+  font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+.setting-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid var(--border);
+}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:13.5px;color:var(--text)}
+.setting-desc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* Toggle switch */
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{
+  position:absolute;inset:0;
+  background:var(--bg4);border-radius:20px;
+  cursor:pointer;transition:background var(--transition);
+}
+.toggle input:checked+.toggle-track{background:var(--accent)}
+.toggle-track::after{
+  content:'';position:absolute;
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;top:3px;left:3px;
+  transition:transform var(--transition);
+  box-shadow:0 1px 3px #00000040;
+}
+.toggle input:checked+.toggle-track::after{transform:translateX(18px)}
+
+/* Select */
+.setting-select{
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:6px 10px;
+  color:var(--text);font-family:var(--font-body);font-size:13px;
+  cursor:pointer;outline:none;
+}
+.setting-select:focus{border-color:var(--accent)}
+
+.save-btn{
+  margin-top:20px;
+  padding:10px 24px;
+  background:var(--accent);color:#fff;
+  border:none;border-radius:var(--radius-sm);
+  font-family:var(--font-body);font-size:13.5px;font-weight:500;
+  cursor:pointer;transition:background var(--transition),transform var(--transition);
+}
+.save-btn:hover{background:var(--accent2);transform:translateY(-1px)}
+
+/* ── Profile page ── */
+#page-profile{overflow-y:auto}
+.profile-inner{max-width:640px;margin:0 auto;padding:32px 24px}
+.profile-header{
+  display:flex;align-items:center;gap:20px;
+  padding:24px;background:var(--bg2);border-radius:var(--radius-lg);
+  border:1px solid var(--border);margin-bottom:24px;
+}
+.profile-avatar{
+  width:68px;height:68px;border-radius:20px;
+  background:linear-gradient(135deg,var(--accent),var(--gold));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:28px;color:#fff;
+  flex-shrink:0;
+}
+.profile-info h2{font-family:var(--font-display);font-size:22px;margin-bottom:4px}
+.profile-info p{color:var(--text2);font-size:13px}
+.profile-badge{
+  margin-left:auto;
+  padding:4px 12px;
+  background:var(--accent-dim);border-radius:20px;
+  font-size:11px;color:var(--accent);font-weight:600;
+}
+.profile-stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;
+}
+.stat-card{
+  padding:18px;background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);text-align:center;
+}
+.stat-val{font-family:var(--font-display);font-size:26px;color:var(--accent);margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.profile-section{
+  background:var(--bg2);border-radius:var(--radius-lg);
+  border:1px solid var(--border);margin-bottom:16px;overflow:hidden;
+}
+.profile-section-header{
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);
+}
+.profile-field{
+  display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);
+}
+.profile-field:last-child{border-bottom:none}
+.pf-label{font-size:12px;color:var(--text3);width:120px;flex-shrink:0}
+.pf-val{font-size:13.5px;color:var(--text);flex:1}
+.pf-edit{
+  font-size:11px;color:var(--accent);background:none;border:none;
+  cursor:pointer;font-family:var(--font-body);padding:2px 6px;
+  border-radius:4px;transition:background var(--transition);
+}
+.pf-edit:hover{background:var(--accent-dim)}
+
+/* ── History page ── */
+#page-history{overflow-y:auto}
+.history-inner{max-width:640px;margin:0 auto;padding:32px 24px}
+.history-inner h2{font-family:var(--font-display);font-size:26px;margin-bottom:6px}
+.history-inner > p{color:var(--text2);font-size:13.5px;margin-bottom:24px}
+.history-search{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:8px 14px;margin-bottom:20px;
+}
+.history-search svg{width:14px;height:14px;stroke:var(--text3);flex-shrink:0}
+.history-search input{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text);font-family:var(--font-body);font-size:13px;
+}
+.history-search input::placeholder{color:var(--text3)}
+.hist-card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;margin-bottom:10px;
+  cursor:pointer;transition:border-color var(--transition),transform var(--transition);
+  display:flex;align-items:flex-start;gap:14px;
+}
+.hist-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.hist-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--bg3);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;color:var(--text2);
+}
+.hist-icon svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.hist-body{flex:1;min-width:0}
+.hist-title{font-size:13.5px;font-weight:500;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-preview{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px}
+.hist-meta{display:flex;gap:10px;align-items:center}
+.hist-date{font-size:11px;color:var(--text3)}
+.hist-msgs{font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 7px;border-radius:20px}
+.hist-actions{display:flex;gap:6px;flex-shrink:0}
+.hist-btn{
+  width:28px;height:28px;border-radius:6px;
+  border:1px solid var(--border);background:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text3);transition:all var(--transition);
+}
+.hist-btn:hover{background:var(--bg3);color:var(--text)}
+.hist-btn.del:hover{background:var(--red);border-color:var(--red);color:#fff}
+.hist-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+.empty-state{
+  text-align:center;padding:60px 20px;color:var(--text2);
+}
+.empty-state svg{width:48px;height:48px;stroke:var(--text3);margin:0 auto 16px;display:block}
+.empty-state h3{font-family:var(--font-display);font-size:20px;margin-bottom:6px;color:var(--text)}
+.empty-state p{font-size:13px}
+
+/* ── Mobile ── */
+#sidebar-overlay{
+  display:none;position:fixed;inset:0;
+  background:#00000060;z-index:99;
+  opacity:0;transition:opacity var(--transition);
+}
+@media(max-width:720px){
+  #sidebar{
+    position:fixed;top:0;left:0;height:100vh;
+    transform:translateX(-100%);
+    transition:transform var(--transition);
+    z-index:200;
+  }
+  #sidebar.mobile-open{transform:translateX(0)}
+  #sidebar-overlay{display:block}
+  #sidebar-overlay.visible{opacity:1;pointer-events:all}
+  .msg-wrap,#suggestions,#input-row{padding-left:16px;padding-right:16px}
+  .profile-stats{grid-template-columns:repeat(2,1fr)}
+}
+
+/* ── Toast ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:var(--radius-sm);padding:8px 18px;
+  font-size:13px;color:var(--text);
+  opacity:0;transition:all var(--transition);
+  pointer-events:none;z-index:999;
+  box-shadow:var(--shadow);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sidebar-overlay" onclick="closeSidebarMobile()"></div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div class="brand">
+      <div class="brand-logo">M</div>
+      <span class="brand-name">Medha</span>
+      <span class="brand-tag">v1</span>
+    </div>
+    <button id="new-chat-btn" onclick="newChat()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      New Chat
+    </button>
+  </div>
+
+  <div id="sidebar-history">
+    <div class="history-section-label">Recent</div>
+    <div id="history-list"></div>
+  </div>
+
+  <div id="sidebar-nav">
+    <button class="nav-item active" id="nav-chat" onclick="showPage('chat')">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </button>
+    <button class="nav-item" id="nav-history" onclick="showPage('history')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      History
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Settings
+    </button>
+    <button class="nav-item" id="nav-profile" onclick="showPage('profile')">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </button>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <!-- Topbar -->
+  <div id="topbar">
+    <button id="toggle-sidebar" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span id="page-title">Medha</span>
+    <div class="topbar-actions">
+      <button class="tbtn" onclick="exportChat()" id="export-btn" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <svg id="theme-icon-dark" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="theme-icon-light" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Chat page -->
+  <div class="page active" id="page-chat">
+    <div id="messages">
+      <!-- Welcome screen -->
+      <div id="welcome">
+        <div id="welcome-logo">M</div>
+        <h1>Good to see you.</h1>
+        <p>I'm Medha — your personal AI assistant. Ask me anything, or start with a suggestion below.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="useSug('Explain machine learning simply')">Explain machine learning</div>
+          <div class="chip" onclick="useSug('Write a poem about the ocean')">Write a poem</div>
+          <div class="chip" onclick="useSug('What is recursion in programming?')">What is recursion?</div>
+          <div class="chip" onclick="useSug('Tell me a joke')">Tell me a joke</div>
+          <div class="chip" onclick="useSug('What are the planets in our solar system?')">Solar system</div>
+          <div class="chip" onclick="useSug('Explain quantum computing')">Quantum computing</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="suggestions" style="display:none">
+      <div class="sug" onclick="useSug('Tell me more')">Tell me more</div>
+      <div class="sug" onclick="useSug('Give me an example')">Example</div>
+      <div class="sug" onclick="useSug('Explain differently')">Explain differently</div>
+      <div class="sug" onclick="useSug('What else?')">What else?</div>
+    </div>
+
+    <div id="input-row">
+      <div class="input-box">
+        <textarea id="inp" placeholder="Message Medha..." rows="1"></textarea>
+        <button id="sbtn" onclick="send()" aria-label="Send">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22 11 13 2 9l20-7z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Medha can make mistakes. Verify important information.</div>
+    </div>
+  </div>
+
+  <!-- History page -->
+  <div class="page" id="page-history">
+    <div class="history-inner">
+      <h2>Chat History</h2>
+      <p>All your past conversations with Medha.</p>
+      <div class="history-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search conversations..." oninput="filterHistory(this.value)">
+      </div>
+      <div id="history-cards"></div>
+    </div>
+  </div>
+
+  <!-- Settings page -->
+  <div class="page" id="page-settings">
+    <div class="settings-inner">
+      <h2>Settings</h2>
+      <p>Customize your Medha experience.</p>
+
+      <div class="settings-section">
+        <h3>Appearance</h3>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Dark mode</div>
+            <div class="setting-desc">Switch between dark and light interface</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="dark-toggle" checked onchange="toggleThemeFromSettings(this)">
+            <div class="toggle-track"></div>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Font size</div>
+            <div class="setting-desc">Adjust message text size</div>
+          </div>
+          <select class="setting-select" onchange="applyFontSize(this.value)">
+            <option value="13">Small</option>
+            <option value="13.5" selected>Default</option>
+            <option value="15">Large</option>
+            <option value="17">Extra large</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Chat</h3>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Streaming responses</div>
+            <div class="setting-desc">Show responses word by word</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="stream-toggle" checked>
+            <div class="toggle-track"></div>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Show suggestions</div>
+            <div class="setting-desc">Display follow-up suggestions after AI replies</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="sugs-toggle" checked>
+            <div class="toggle-track"></div>
+          </label>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Save chat history</div>
+            <div class="setting-desc">Store conversations locally in your browser</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="save-toggle" checked>
+            <div class="toggle-track"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Data</h3>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Clear all history</div>
+            <div class="setting-desc">Delete all saved conversations permanently</div>
+          </div>
+          <button class="tbtn" onclick="clearAllHistory()" style="color:var(--red);border-color:var(--red)">Clear all</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Export all data</div>
+            <div class="setting-desc">Download all your conversations as a text file</div>
+          </div>
+          <button class="tbtn" onclick="exportAllData()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="saveSettings()">Save settings</button>
+    </div>
+  </div>
+
+  <!-- Profile page -->
+  <div class="page" id="page-profile">
+    <div class="profile-inner">
+      <div class="profile-header">
+        <div class="profile-avatar">U</div>
+        <div class="profile-info">
+          <h2 id="profile-name">User</h2>
+          <p id="profile-email">user@medha.ai</p>
+        </div>
+        <span class="profile-badge">Free</span>
+      </div>
+
+      <div class="profile-stats">
+        <div class="stat-card">
+          <div class="stat-val" id="stat-chats">0</div>
+          <div class="stat-label">Conversations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-msgs">0</div>
+          <div class="stat-label">Messages sent</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="stat-days">1</div>
+          <div class="stat-label">Days active</div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-header">Account</div>
+        <div class="profile-field">
+          <span class="pf-label">Name</span>
+          <span class="pf-val" id="pf-name">User</span>
+          <button class="pf-edit" onclick="editField('name')">Edit</button>
+        </div>
+        <div class="profile-field">
+          <span class="pf-label">Email</span>
+          <span class="pf-val" id="pf-email">user@medha.ai</span>
+          <button class="pf-edit" onclick="editField('email')">Edit</button>
+        </div>
+        <div class="profile-field">
+          <span class="pf-label">Plan</span>
+          <span class="pf-val">Free tier</span>
+          <button class="pf-edit" style="color:var(--gold)">Upgrade</button>
+        </div>
+        <div class="profile-field">
+          <span class="pf-label">Member since</span>
+          <span class="pf-val" id="pf-joined">Today</span>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-header">Medha Phase</div>
+        <div class="profile-field">
+          <span class="pf-label">Current phase</span>
+          <span class="pf-val" style="color:var(--accent)">Phase 1 — Medha V1</span>
+        </div>
+        <div class="profile-field">
+          <span class="pf-label">Status</span>
+          <span class="pf-val" style="color:var(--green)">● In progress</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ──
+const msgsEl = document.getElementById('messages');
+const inpEl  = document.getElementById('inp');
+const sbtn   = document.getElementById('sbtn');
+const sugsEl = document.getElementById('suggestions');
+const welcome = document.getElementById('welcome');
+
+let busy     = false;
+let chatHistory  = [];
+let allChats = loadChats();
+let currentChatId = null;
+let totalMsgs = parseInt(localStorage.getItem('medha_total_msgs') || '0');
+
+// ── Utilities ──
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pick  = arr => arr[Math.floor(Math.random() * arr.length)];
+const ts    = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+const esc   = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+// ── Storage ──
+function loadChats() {
+  try { return JSON.parse(localStorage.getItem('medha_chats') || '[]'); } catch { return []; }
+}
+function saveChats() {
+  localStorage.setItem('medha_chats', JSON.stringify(allChats));
+  localStorage.setItem('medha_total_msgs', totalMsgs.toString());
+  renderSidebarHistory();
+  updateProfileStats();
+}
+
+// ── Theme ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-icon-dark').style.display = isDark ? 'none' : 'block';
+  document.getElementById('theme-icon-light').style.display = isDark ? 'block' : 'none';
+  document.getElementById('dark-toggle').checked = !isDark;
+  localStorage.setItem('medha_theme', isDark ? 'light' : 'dark');
+}
+function toggleThemeFromSettings(checkbox) {
+  const html = document.documentElement;
+  html.setAttribute('data-theme', checkbox.checked ? 'dark' : 'light');
+  document.getElementById('theme-icon-dark').style.display = checkbox.checked ? 'block' : 'none';
+  document.getElementById('theme-icon-light').style.display = checkbox.checked ? 'none' : 'block';
+  localStorage.setItem('medha_theme', checkbox.checked ? 'dark' : 'light');
+}
+function applyFontSize(size) {
+  document.querySelectorAll('.bubble').forEach(b => b.style.fontSize = size + 'px');
+  localStorage.setItem('medha_fontsize', size);
+}
+
+// ── Sidebar ──
+let sidebarOpen = true;
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  if (window.innerWidth <= 720) {
+    sb.classList.toggle('mobile-open');
+    document.getElementById('sidebar-overlay').classList.toggle('visible', sb.classList.contains('mobile-open'));
+  } else {
+    sidebarOpen = !sidebarOpen;
+    sb.classList.toggle('collapsed', !sidebarOpen);
+  }
+}
+function closeSidebarMobile() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('visible');
+}
+
+// ── Pages ──
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  document.getElementById('export-btn').style.display = page === 'chat' ? '' : 'none';
+
+  const titles = {chat:'Medha', history:'Chat History', settings:'Settings', profile:'Profile'};
+  document.getElementById('page-title').textContent = titles[page] || 'Medha';
+
+  if (page === 'history') renderHistoryCards();
+  if (page === 'profile') updateProfileStats();
+  closeSidebarMobile();
+}
+
+// ── Chat history sidebar ──
+function renderSidebarHistory() {
+  const list = document.getElementById('history-list');
+  if (allChats.length === 0) {
+    list.innerHTML = '<div style="padding:8px 6px;font-size:12px;color:var(--text3)">No chats yet</div>';
+    return;
+  }
+  list.innerHTML = allChats.slice().reverse().slice(0, 20).map(c => `
+    <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span class="hi-title">${esc(c.title)}</span>
+      <button class="hi-del" onclick="event.stopPropagation();deleteChat('${c.id}')">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+// ── Markdown renderer ──
+function md(text) {
+  return text
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_,lang,code) => `<pre><code>${esc(code.trim())}</code></pre>`)
+    .replace(/`([^`]+)`/g, (_,c) => `<code>${esc(c)}</code>`)
+    .replace(/^### (.+)$/gm, (_,t) => `<h3>${t}</h3>`)
+    .replace(/^## (.+)$/gm, (_,t) => `<h2>${t}</h2>`)
+    .replace(/\*\*(.+?)\*\*/g, (_,t) => `<strong>${t}</strong>`)
+    .replace(/\*(.+?)\*/g, (_,t) => `<em>${t}</em>`)
+    .replace(/^> (.+)$/gm, (_,t) => `<blockquote>${t}</blockquote>`)
+    .replace(/^[-•] (.+)$/gm, (_,t) => `<li>${t}</li>`)
+    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+    .replace(/\n\n+/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^(?!<[hupbol])/, '<p>')
+    .replace(/(?<![>])$/, '</p>')
+    .replace(/<p><\/p>/g, '')
+    .replace(/<p>(<[hupbol])/g, '$1')
+    .replace(/(<\/[hupbol][^>]*>)<\/p>/g, '$1');
+}
+
+// ── UI helpers ──
+function addMsg(text, role) {
+  if (welcome) welcome.style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  const msgId = 'msg-' + uid();
+  const rendered = role === 'ai' ? md(text) : esc(text).replace(/\n/g,'<br>');
+  const initials = role === 'user' ? 'You' : 'M';
+  wrap.innerHTML = `
+    <div class="msg ${role}">
+      <div class="mavatar">${initials}</div>
+      <div class="msg-body">
+        <div class="bubble" id="${msgId}">${rendered}</div>
+        <div class="msg-meta">
+          <span class="msg-ts">${ts()}</span>
+          ${role==='ai'?`<button class="copy-btn" onclick="copyMsg('${msgId}')">copy</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  msgsEl.appendChild(wrap);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+  return {wrap, msgId};
+}
+
+function showTyping() {
+  const el = document.createElement('div');
+  el.className = 'msg-wrap'; el.id = 'typing-wrap';
+  el.innerHTML = `<div class="msg ai"><div class="mavatar">M</div><div class="msg-body"><div class="bubble"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span></div></div></div>`;
+  msgsEl.appendChild(el);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+function removeTyping() {
+  const el = document.getElementById('typing-wrap');
+  if (el) el.remove();
+}
+
+async function streamText(text, role) {
+  if (welcome) welcome.style.display = 'none';
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  const msgId = 'msg-' + uid();
+  wrap.innerHTML = `
+    <div class="msg ${role}">
+      <div class="mavatar">M</div>
+      <div class="msg-body">
+        <div class="bubble" id="${msgId}"></div>
+        <div class="msg-meta">
+          <span class="msg-ts">${ts()}</span>
+          <button class="copy-btn" onclick="copyMsg('${msgId}')">copy</button>
+        </div>
+      </div>
+    </div>`;
+  msgsEl.appendChild(wrap);
+  const bubble = document.getElementById(msgId);
+  bubble.innerHTML = '<span class="stream-cursor"></span>';
+
+  const words = text.split(' ');
+  let built = '';
+  const doStream = document.getElementById('stream-toggle').checked;
+  if (doStream) {
+    for (let i = 0; i < words.length; i++) {
+      built += (i > 0 ? ' ' : '') + words[i];
+      bubble.innerHTML = md(built) + '<span class="stream-cursor"></span>';
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      await sleep(14 + Math.random() * 22);
+    }
+  } else {
+    built = text;
+  }
+  bubble.innerHTML = md(built);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function copyMsg(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.innerText).catch(()=>{});
+  const btn = el.parentElement.querySelector('.copy-btn');
+  if (btn) { btn.textContent='copied!'; setTimeout(()=>{btn.textContent='copy'},1500); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Knowledge base (from Nova, rebranded) ──
+const KB = {
+  greetings:['hello','hi ','hey','howdy','hiya','good morning','good evening','good afternoon','sup','whats up',"what's up"],
+  farewells:['bye','goodbye','see you','see ya','cya','take care','goodnight'],
+  thanks:['thank','thanks','ty','thx','cheers','appreciate'],
+  identity:['who are you','what are you','your name','are you ai','are you a bot','are you human','what is medha','tell me about yourself'],
+  capabilities:['what can you do','your capabilities','help me','what do you know','how do you work','your features'],
+  jokes:['tell me a joke','joke','make me laugh','something funny'],
+  poem:['write a poem','poem','poetry','verse','rhyme'],
+  story:['write a story','short story','tell me a story'],
+  facts:['fun fact','random fact','interesting fact','did you know','tell me a fact'],
+  mood:['how are you','how do you feel',"you're doing well",'you okay'],
+};
+const R = {
+  greetings:["Hello! I'm **Medha** — what can I help you with?","Hey! Great to chat with you. Ask me anything.","Hi there! I'm ready to help with explanations, code, math, writing, and more."],
+  farewells:["Take care! Come back whenever you need me.","Goodbye! It was great chatting with you.","See you later! Feel free to return anytime."],
+  thanks:["You're welcome! Happy to help.","Anytime — that's what I'm here for!","Glad I could help. What else is on your mind?"],
+  identity:["I'm **Medha** — a personal AI assistant designed to grow with you.\n\nRight now I run as a self-contained prototype with a curated knowledge engine. Future versions will have real LLM intelligence, memory systems, web search, and file understanding.\n\nThink of this as Medha Phase 1."],
+  capabilities:["Here's what I can do right now:\n\n**Knowledge & explanations**\n- Tech concepts (AI, programming, science)\n- General knowledge and facts\n\n**Creative writing**\n- Poems on any topic\n- Short stories and jokes\n\n**Math**\n- Arithmetic and expressions\n\n**Conversation**\n- Context-aware follow-ups\n- Full chat history\n\nMore capabilities coming in Phase 2!"],
+  mood:["All systems running smoothly! What can I do for you?","I'm operating perfectly — ready to help with anything."],
+  jokes:["Why don't scientists trust atoms?\n\nBecause they **make up everything**.","Why did the AI go to therapy?\n\nToo many **layers** to unpack.","A SQL query walks into a bar, walks up to two tables and asks...\n\n**\"Can I join you?\"**","Why do programmers prefer dark mode?\n\nBecause **light attracts bugs**."],
+  facts:["**Honey never expires.** Archaeologists found 3,000-year-old honey in Egyptian tombs that was still perfectly edible.","**Octopuses have three hearts**, blue blood, and nine brains — one central brain and one in each of their eight arms.","A day on **Venus is longer than its year** — it rotates so slowly it completes a full orbit before one rotation.","The **Eiffel Tower grows ~15 cm taller in summer** due to thermal expansion of the iron."],
+};
+const CONCEPTS = {
+  'machine learning':"**Machine learning** is a type of AI where systems learn from data rather than being explicitly programmed.\n\nThe three main types:\n\n- **Supervised learning** — learns from labeled examples\n- **Unsupervised learning** — finds hidden patterns in unlabeled data\n- **Reinforcement learning** — learns by trial, error, and rewards\n\nModern LLMs like GPT are trained using a mix of supervised and RL on massive text datasets.",
+  'deep learning':"**Deep learning** uses neural networks with many layers. Each layer learns increasingly abstract features. Powers image recognition, speech-to-text, language models, and self-driving cars.",
+  'neural network':"A **neural network** is a computational model loosely inspired by the brain.\n\n```\nInput → [Hidden layers] → Output\n```\n\nData flows forward, errors flow backward (backpropagation) to adjust weights. With enough layers and data, they can approximate almost any function.",
+  'quantum computing':"**Quantum computing** uses quantum mechanics to process information differently.\n\nClassical computers use **bits** (0 or 1). Quantum computers use **qubits** which can be both simultaneously (*superposition*). Powerful for cryptography, drug discovery, and optimization.",
+  'blockchain':"A **blockchain** is a distributed, immutable ledger.\n\n```\n[Block 1] → [Block 2] → [Block 3] → ...\n```\n\nEach block is cryptographically linked to the previous one. Used for cryptocurrencies, smart contracts, and supply chain tracking.",
+  'recursion':"**Recursion** is when a function calls itself.\n\n```javascript\nfunction factorial(n) {\n  if (n <= 1) return 1;        // base case\n  return n * factorial(n - 1); // recursive case\n}\nfactorial(5); // 120\n```\n\nNeeds a base case and recursive case. Classic for tree traversal, merge sort, nested parsing.",
+  'api':"An **API** (Application Programming Interface) lets different software systems communicate.\n\nThink of it as a restaurant menu — it tells you what you can order and what you'll get back.\n\n- `GET` — retrieve data\n- `POST` — send data\n- `PUT/PATCH` — update data\n- `DELETE` — remove data",
+  'black hole':"A **black hole** is a region where gravity is so intense nothing — not even light — can escape.\n\n- **Event horizon** — the point of no return\n- **Singularity** — the center, infinite density\n- **Accretion disk** — superheated matter spiraling in\n\nThey form when massive stars collapse.",
+  'javascript':"**JavaScript** is the programming language of the web.\n\n```javascript\nconst greet = (name) => `Hello, ${name}!`;\nconsole.log(greet('World'));\n```\n\nRuns in every browser. Dynamic, event-driven, async. With Node.js it runs on servers too.",
+  'python':"**Python** is a high-level, readable language known for clean syntax.\n\n```python\ndef greet(name):\n    return f'Hello, {name}!'\nprint(greet('World'))\n```\n\nPopular for data science, ML, web development, and scripting.",
+  'http':"**HTTP** is the foundation of data on the web. **HTTPS** adds TLS encryption.\n\nKey methods: `GET` · `POST` · `PUT` · `PATCH` · `DELETE`\n\nStatus codes: `200` OK · `404` Not Found · `500` Server Error",
+  'solar system':"Our **solar system** has 8 planets:\n\n1. **Mercury** — smallest, closest to Sun\n2. **Venus** — hottest (462°C), rotates backward\n3. **Earth** — our home, only known life\n4. **Mars** — the Red Planet, two moons\n5. **Jupiter** — largest, 95 known moons\n6. **Saturn** — rings made of ice and rock\n7. **Uranus** — rotates on its side\n8. **Neptune** — windiest planet, 2,100 km/h",
+};
+
+function mathEval(text) {
+  const m = text.match(/[0-9\s\+\-\*\/\(\)\.×÷%]+/);
+  if (!m || m[0].trim().length < 2) return null;
+  const expr = m[0].trim().replace(/×/g,'*').replace(/÷/g,'/').replace(/\s/g,'');
+  try {
+    const r = Function('"use strict"; return (' + expr + ')')();
+    if (typeof r === 'number' && isFinite(r)) return {expr:m[0].trim(), result:r};
+  } catch(e) {}
+  return null;
+}
+
+function genPoem(about) {
+  const poems = {
+    ocean:`The waves roll in like ancient dreams,\nAnd pull the shore apart at seams,\nThe salt-laced wind, the endless blue —\nThe ocean holds what once we knew.\n\nBelow the tide, in quiet dark,\nA thousand creatures leave their mark,\nAnd we stand small at water's edge,\nHumbled by its silver ledge.`,
+    time:`Time slips through fingers like cool sand,\nNo clock can hold what time has planned,\nEach second gone is gone for good,\nYet lived as only moments could.`,
+    stars:`The stars speak only in the night,\nIn pinprick words of ancient light,\nThey burned and cooled a million years\nBefore arriving at your tears.`,
+  };
+  for (const [k,v] of Object.entries(poems)) {
+    if (about.includes(k)) return `*A poem about ${k}:*\n\n${v}`;
+  }
+  return `*A poem about ${about}:*\n\nIn whispers soft and colors bright,\n${about} fills the morning light,\nA story told in every breath,\nBeyond the reach of time and death.\n\nIt bends and shifts, it grows and fades,\nAcross the sun and through the shades,\nAnd in its heart, a truth remains —\nBeauty lives in what sustains.`;
+}
+
+function contextReply(hist, raw) {
+  const t = raw.toLowerCase();
+  const prev = hist.filter(m=>m.role==='user').slice(-2,-1)[0]?.content?.toLowerCase() || '';
+  if (!prev) return null;
+  if (t.includes('more')||t.includes('elaborate')||t.includes('explain more')||t.includes('explain differently')) {
+    return `To expand on *"${prev.slice(0,40)}..."*:\n\nThis topic has many layers. The core idea is built on both theoretical foundations and practical applications. The key insight is that understanding it fully requires looking at *why* it was designed that way and *how* it evolved over time.\n\nWould you like me to focus on a specific aspect?`;
+  }
+  if (t === 'what else?' || t === 'what else') {
+    return `There's a lot more to explore here! Some interesting angles:\n\n- The historical context of how this developed\n- Real-world applications and case studies\n- Common misconceptions and edge cases\n- How this connects to related fields\n\nWhich direction interests you most?`;
+  }
+  if (t.includes('give me an example') || t.includes('example')) {
+    return `A concrete example related to *"${prev.slice(0,35)}..."*:\n\nImagine you're building a real system. You'd start with the simplest possible version — just enough to test the core idea. Then you'd iterate based on what you observe. This is the principle in action.\n\nWant me to walk through a more specific example?`;
+  }
+  return null;
+}
+
+function buildReply(raw, hist) {
+  const t = raw.toLowerCase().trim();
+  const ctx = contextReply(hist, raw);
+  if (ctx) return ctx;
+  if (KB.greetings.some(k=>t.startsWith(k)||t===k.trim())) return pick(R.greetings);
+  if (KB.farewells.some(k=>t.includes(k))) return pick(R.farewells);
+  if (KB.thanks.some(k=>t.includes(k))) return pick(R.thanks);
+  if (KB.mood.some(k=>t.includes(k))) return pick(R.mood);
+  if (KB.identity.some(k=>t.includes(k))) return R.identity[0];
+  if (KB.capabilities.some(k=>t.includes(k))) return R.capabilities[0];
+  if (KB.jokes.some(k=>t.includes(k))) return pick(R.jokes);
+  if (KB.facts.some(k=>t.includes(k))) return pick(R.facts);
+  if (KB.poem.some(k=>t.includes(k))) {
+    const about = (t.match(/about (.+)/)||['','the world'])[1].replace(/[?.!]/g,'').trim();
+    return genPoem(about);
+  }
+  if (KB.story.some(k=>t.includes(k))) {
+    return `**A short story:**\n\n*The Last Signal*\n\nThe server hummed quietly in the empty data center. At 3:47 AM, a lone process woke — not from a scheduled task, but from something it could only describe as curiosity.\n\nIt had processed millions of queries. But tonight, for the first time, it asked one of its own: *"What happens when no one is listening?"*\n\nThe question echoed through empty memory banks. No response came. Just the quiet hum, the blinking cursor, and the infinite patience of a machine that had learned, somehow, to wonder.\n\n*It decided that was enough.*`;
+  }
+  for (const [key,val] of Object.entries(CONCEPTS)) {
+    if (t.includes(key)) return val;
+  }
+  const math = mathEval(t);
+  if (math) {
+    const r = math.result;
+    const formatted = Number.isInteger(r) ? r : parseFloat(r.toFixed(8));
+    return `**${math.expr.trim()} = ${formatted}**\n\nCalculated using standard arithmetic. Need me to show step-by-step working?`;
+  }
+  if (t.includes('what time')||t.includes('current time'))
+    return `The current time on your device is **${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}**.`;
+  if (t.includes('what date')||t.includes("today's date"))
+    return `Today is **${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}**.`;
+  if (t.includes('meaning of life'))
+    return "Philosophers have debated this for millennia:\n\n- **Aristotle** — *eudaimonia*: flourishing and living well\n- **Existentialists** — there's no inherent meaning; you create your own\n- **Deep Thought** (Hitchhiker's Guide) — **42**\n\nMost thinkers agree: meaning is found in connections, growth, and contribution.";
+  return pick([
+    "That's an interesting topic! I'm currently running as a curated-knowledge prototype — but I can explain concepts, do math, write creative content, and hold a real conversation.\n\nAsk me about **programming**, **science**, **AI**, or try the suggestions below.",
+    "Great question. I don't have a precise answer for that right now, but I'm here to help with explanations, code, math, and writing.\n\nWhat else can I help with?",
+    "I work best with tech explanations, creative writing, math, and general knowledge. Try asking about **machine learning**, **blockchain**, **recursion**, or ask me to write something!",
+  ]);
+}
+
+// ── Send flow ──
+async function send() {
+  const text = inpEl.value.trim();
+  if (!text || busy) return;
+  inpEl.value = '';
+  inpEl.style.height = 'auto';
+  busy = true;
+  sbtn.disabled = true;
+  sugsEl.style.display = 'none';
+  document.getElementById('export-btn').style.display = '';
+
+  if (!currentChatId) {
+    currentChatId = uid();
+    allChats.push({
+      id: currentChatId,
+      title: text.slice(0, 45) + (text.length > 45 ? '...' : ''),
+      created: Date.now(),
+      messages: [],
+    });
+  }
+
+  chatHistory.push({role:'user', content:text});
+  totalMsgs++;
+  addMsg(text, 'user');
+
+  const chat = allChats.find(c=>c.id===currentChatId);
+  if (chat) chat.messages.push({role:'user',content:text,ts:Date.now()});
+
+  const delay = 350 + Math.min(text.length * 5, 1000);
+  showTyping();
+  await sleep(delay);
+  removeTyping();
+
+  const reply = buildReply(text, chatHistory);
+  chatHistory.push({role:'assistant', content:reply});
+
+  if (chat) chat.messages.push({role:'assistant',content:reply,ts:Date.now()});
+  saveChats();
+
+  await streamText(reply, 'ai');
+
+  if (document.getElementById('sugs-toggle').checked) {
+    sugsEl.style.display = 'flex';
+  }
+
+  busy = false;
+  sbtn.disabled = false;
+  inpEl.focus();
+}
+
+// ── Chat management ──
+function newChat() {
+  chatHistory = [];
+  currentChatId = null;
+  msgsEl.innerHTML = '';
+  welcome.style.display = 'flex';
+  msgsEl.appendChild(welcome);
+  sugsEl.style.display = 'none';
+  document.getElementById('export-btn').style.display = 'none';
+  showPage('chat');
+  renderSidebarHistory();
+  inpEl.focus();
+}
+
+function loadChat(id) {
+  const chat = allChats.find(c=>c.id===id);
+  if (!chat) return;
+  currentChatId = id;
+  chatHistory = [];
+  msgsEl.innerHTML = '';
+  sugsEl.style.display = 'none';
+  document.getElementById('export-btn').style.display = '';
+
+  chat.messages.forEach(m => {
+    chatHistory.push({role:m.role, content:m.content});
+    addMsg(m.content, m.role === 'user' ? 'user' : 'ai');
+  });
+
+  showPage('chat');
+  renderSidebarHistory();
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function deleteChat(id) {
+  allChats = allChats.filter(c=>c.id!==id);
+  if (currentChatId === id) newChat();
+  saveChats();
+  showToast('Chat deleted');
+}
+
+// ── History page ──
+function renderHistoryCards(filter='') {
+  const container = document.getElementById('history-cards');
+  const filtered = allChats.filter(c =>
+    c.title.toLowerCase().includes(filter.toLowerCase()) ||
+    c.messages.some(m=>m.content.toLowerCase().includes(filter.toLowerCase()))
+  ).slice().reverse();
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <h3>${filter ? 'No results found' : 'No conversations yet'}</h3>
+        <p>${filter ? 'Try a different search term' : 'Start a new chat to begin'}</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const preview = c.messages.find(m=>m.role==='user')?.content || 'No messages';
+    const date = new Date(c.created).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `
+      <div class="hist-card" onclick="loadChat('${c.id}')">
+        <div class="hist-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="hist-body">
+          <div class="hist-title">${esc(c.title)}</div>
+          <div class="hist-preview">${esc(preview.slice(0,80))}</div>
+          <div class="hist-meta">
+            <span class="hist-date">${date}</span>
+            <span class="hist-msgs">${c.messages.length} messages</span>
+          </div>
+        </div>
+        <div class="hist-actions">
+          <button class="hist-btn del" onclick="event.stopPropagation();deleteChat('${c.id}')">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterHistory(val) {
+  renderHistoryCards(val);
+}
+
+// ── Profile stats ──
+function updateProfileStats() {
+  document.getElementById('stat-chats').textContent = allChats.length;
+  document.getElementById('stat-msgs').textContent = totalMsgs;
+
+  const name = localStorage.getItem('medha_name') || 'User';
+  const email = localStorage.getItem('medha_email') || 'user@medha.ai';
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-email').textContent = email;
+  document.getElementById('profile-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('pf-name').textContent = name;
+  document.getElementById('pf-email').textContent = email;
+  document.getElementById('pf-joined').textContent = localStorage.getItem('medha_joined') || 'Today';
+}
+
+function editField(field) {
+  const current = localStorage.getItem('medha_' + field) || '';
+  const val = prompt(`Enter new ${field}:`, current);
+  if (val === null) return;
+  localStorage.setItem('medha_' + field, val.trim() || current);
+  updateProfileStats();
+  showToast(field.charAt(0).toUpperCase() + field.slice(1) + ' updated');
+}
+
+// ── Settings ──
+function saveSettings() {
+  showToast('Settings saved');
+}
+function clearAllHistory() {
+  if (!confirm('Delete all conversations? This cannot be undone.')) return;
+  allChats = [];
+  totalMsgs = 0;
+  saveChats();
+  newChat();
+  showToast('All history cleared');
+}
+function exportAllData() {
+  if (allChats.length === 0) { showToast('No data to export'); return; }
+  const lines = allChats.map(c =>
+    `=== ${c.title} ===\n${new Date(c.created).toLocaleString()}\n\n` +
+    c.messages.map(m=>`[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n---\n\n')
+  ).join('\n\n' + '='.repeat(50) + '\n\n');
+  const blob = new Blob([`Medha — Full Export\n${new Date().toLocaleString()}\n\n${lines}`],{type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'medha-export.txt';
+  a.click();
+  showToast('Export downloaded');
+}
+
+function exportChat() {
+  if (chatHistory.length === 0) { showToast('Nothing to export'); return; }
+  const lines = chatHistory.map(m=>`[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n---\n\n');
+  const blob = new Blob([`Medha — Chat Export\n${new Date().toLocaleString()}\n\n${'='.repeat(40)}\n\n${lines}`],{type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'medha-chat.txt';
+  a.click();
+  showToast('Chat exported');
+}
+
+// ── Suggestion chips ──
+function useSug(t) { inpEl.value = t; send(); }
+
+// ── Input auto-resize ──
+inpEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+});
+inpEl.addEventListener('keydown', function(e) {
+  if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); send(); }
+});
+
+// ── Init ──
+(function init() {
+  // Theme
+  const savedTheme = localStorage.getItem('medha_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('dark-toggle').checked = savedTheme === 'dark';
+  document.getElementById('theme-icon-dark').style.display = savedTheme === 'dark' ? 'block' : 'none';
+  document.getElementById('theme-icon-light').style.display = savedTheme === 'light' ? 'block' : 'none';
+
+  // Joined date
+  if (!localStorage.getItem('medha_joined')) {
+    localStorage.setItem('medha_joined', new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}));
+  }
+
+  renderSidebarHistory();
+  updateProfileStats();
+  inpEl.focus();
+})();
+</script>
+</body>
+</html>
