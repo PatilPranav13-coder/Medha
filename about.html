@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About — Medha</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07080d;
+      --surface:   #0e101a;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #5c9eff;
+      --accent2:   #a78bfa;
+      --text:      #e8eaf0;
+      --muted:     #6b7280;
+      --tag-bg:    rgba(92,158,255,0.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-weight: 300;
+      line-height: 1.75;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: .6;
+    }
+
+    /* ── GRADIENT MESH ── */
+    .mesh {
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 10% 20%, rgba(92,158,255,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 90% 80%, rgba(167,139,250,0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 3rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,8,13,0.75);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.35rem;
+      letter-spacing: -.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--accent); }
+    nav ul {
+      list-style: none;
+      display: flex; gap: 2rem;
+    }
+    nav ul a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .8rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: color .2s;
+    }
+    nav ul a:hover, nav ul a.active { color: var(--text); }
+
+    /* ── WRAPPER ── */
+    main {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 2rem 8rem;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 7rem 0 5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-label {
+      display: inline-block;
+      font-size: .7rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(92,158,255,.3);
+      padding: .3rem .8rem;
+      border-radius: 2px;
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      line-height: 1.0;
+      letter-spacing: -.04em;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      max-width: 560px;
+      color: var(--muted);
+      font-size: .95rem;
+      line-height: 1.8;
+    }
+
+    /* ── SECTIONS ── */
+    section {
+      padding: 4.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-child { border-bottom: none; }
+
+    .section-tag {
+      font-size: .68rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: .75rem;
+      font-weight: 400;
+    }
+
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.5rem, 3vw, 2.1rem);
+      letter-spacing: -.03em;
+      margin-bottom: 1.5rem;
+      line-height: 1.15;
+    }
+
+    p {
+      color: #9ca3af;
+      font-size: .9rem;
+      line-height: 1.85;
+      max-width: 640px;
+    }
+    p + p { margin-top: 1rem; }
+
+    /* ── DOMAIN GRID ── */
+    .domain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: .75rem;
+      margin-top: 2.5rem;
+    }
+    .domain-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+      transition: border-color .2s, transform .2s;
+      cursor: default;
+    }
+    .domain-card:hover {
+      border-color: rgba(92,158,255,.35);
+      transform: translateY(-2px);
+    }
+    .domain-icon {
+      font-size: 1.3rem;
+      margin-bottom: .6rem;
+    }
+    .domain-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: .85rem;
+      color: var(--text);
+      letter-spacing: .01em;
+      margin-bottom: .3rem;
+    }
+    .domain-desc {
+      font-size: .73rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── ROADMAP ── */
+    .roadmap {
+      margin-top: 2.5rem;
+      position: relative;
+    }
+    .roadmap::before {
+      content: '';
+      position: absolute;
+      left: 11px; top: 8px; bottom: 8px;
+      width: 1px;
+      background: var(--border);
+    }
+    .phase {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 0 1.5rem;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp .5s ease forwards;
+    }
+    .phase:nth-child(1) { animation-delay: .1s; }
+    .phase:nth-child(2) { animation-delay: .2s; }
+    .phase:nth-child(3) { animation-delay: .3s; }
+    .phase:nth-child(4) { animation-delay: .4s; }
+
+    .phase-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      margin-top: 5px;
+      flex-shrink: 0;
+      transition: border-color .2s;
+      position: relative; z-index: 1;
+    }
+    .phase.active .phase-dot {
+      border-color: var(--accent);
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(92,158,255,.5);
+    }
+    .phase.upcoming .phase-dot {
+      border-color: var(--accent2);
+    }
+
+    .phase-body {}
+    .phase-meta {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: .4rem;
+    }
+    .phase-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: .95rem;
+      color: var(--text);
+    }
+    .phase-status {
+      font-size: .65rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: .2rem .6rem;
+      border-radius: 2px;
+    }
+    .status-live   { background: rgba(92,158,255,.12); color: var(--accent); }
+    .status-next   { background: rgba(167,139,250,.12); color: var(--accent2); }
+    .status-future { background: rgba(255,255,255,.05); color: var(--muted); }
+
+    .phase-items {
+      list-style: none;
+      margin-top: .75rem;
+      display: flex; flex-direction: column; gap: .35rem;
+    }
+    .phase-items li {
+      font-size: .8rem;
+      color: var(--muted);
+      display: flex; align-items: flex-start; gap: .6rem;
+    }
+    .phase-items li::before {
+      content: '—';
+      color: var(--border);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── FOOTER CTA ── */
+    .cta-block {
+      margin-top: 5rem;
+      padding: 3rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      display: flex; flex-direction: column; gap: 1.2rem;
+    }
+    .cta-block h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.4rem;
+      letter-spacing: -.02em;
+    }
+    .cta-block p { max-width: 480px; }
+    .cta-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: .5rem; }
+    .btn {
+      display: inline-block;
+      padding: .65rem 1.4rem;
+      font-family: 'DM Mono', monospace;
+      font-size: .78rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 2px;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #07080d;
+      border: 1px solid var(--accent);
+    }
+    .btn-primary:hover { background: #7bb3ff; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-label, .hero h1, .hero-sub {
+      opacity: 0;
+      animation: fadeUp .6s ease forwards;
+    }
+    .hero-label { animation-delay: .05s; }
+    .hero h1    { animation-delay: .15s; }
+    .hero-sub   { animation-delay: .25s; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 1rem 1.25rem; }
+      nav ul { gap: 1.2rem; }
+      main { padding: 0 1.25rem 6rem; }
+      .hero { padding: 4rem 0 3rem; }
+      .domain-grid { grid-template-columns: 1fr 1fr; }
+      .cta-block { padding: 1.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="mesh"></div>
+
+<nav>
+  <a class="nav-logo" href="/">Medha<span>.</span></a>
+  <ul>
+    <li><a href="/">Home</a></li>
+    <li><a href="/about.html" class="active">About</a></li>
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">GitHub</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <div class="hero-label">About the project</div>
+    <h1>Intelligence built<br>for <em>deep work</em>.</h1>
+    <p class="hero-sub">
+      Medha is an AI system designed from the ground up for technical and creative professionals — the people who need more than a chatbot.
+    </p>
+  </div>
+
+  <!-- ── WHAT IS MEDHA ── -->
+  <section id="what">
+    <div class="section-tag">01 / What is Medha?</div>
+    <h2>An AI built for substance</h2>
+    <p>
+      Medha is a domain-focused AI assistant engineered for precision, depth, and utility across technical disciplines. Unlike general-purpose tools, Medha is tuned to reason rigorously — across research literature, codebases, engineering constraints, and design tradeoffs.
+    </p>
+    <p>
+      The name <em>Medha</em> (मेधा) comes from Sanskrit, meaning intellect, cognitive power, and the capacity for deep understanding. That ethos is baked into how the system is built: not surface-level answers, but structured reasoning grounded in domain knowledge.
+    </p>
+  </section>
+
+  <!-- ── WHY ── -->
+  <section id="why">
+    <div class="section-tag">02 / Why was it built?</div>
+    <h2>Domains that demand more</h2>
+    <p>
+      Most AI tools optimise for breadth. Medha optimises for depth. It was built because professionals in technical fields — researchers, engineers, chip designers, educators — consistently hit the ceiling of general-purpose assistants.
+    </p>
+
+    <div class="domain-grid">
+      <div class="domain-card">
+        <div class="domain-icon">🔬</div>
+        <div class="domain-title">Research</div>
+        <div class="domain-desc">Literature synthesis, hypothesis framing, methodology critique, citation analysis.</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-icon">🎓</div>
+        <div class="domain-title">Education</div>
+        <div class="domain-desc">Curriculum design, concept explanation, adaptive problem sets, Socratic tutoring.</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-icon">💻</div>
+        <div class="domain-title">Code</div>
+        <div class="domain-desc">System design, debugging, architecture review, test generation, code explanation.</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-icon">⚙️</div>
+        <div class="domain-title">Engineering</div>
+        <div class="domain-desc">Spec analysis, constraint modelling, failure analysis, cross-discipline tradeoffs.</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-icon">🎨</div>
+        <div class="domain-title">Design</div>
+        <div class="domain-desc">System thinking, design critique, UX reasoning, component architecture.</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-icon">⚡</div>
+        <div class="domain-title">Semiconductors</div>
+        <div class="domain-desc">RTL, verification, EDA workflows, timing analysis, process node knowledge.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ROADMAP ── -->
+  <section id="roadmap">
+    <div class="section-tag">03 / Roadmap</div>
+    <h2>Where we're going</h2>
+    <p>Medha is under active development. Here's the planned trajectory — from a focused MVP to a full collaborative intelligence layer.</p>
+
+    <div class="roadmap">
+
+      <div class="phase active">
+        <div class="phase-dot"></div>
+        <div class="phase-body">
+          <div class="phase-meta">
+            <span class="phase-label">Phase 1 — Foundation</span>
+            <span class="phase-status status-live">Live</span>
+          </div>
+          <ul class="phase-items">
+            <li>Core assistant with domain awareness</li>
+            <li>Code understanding &amp; generation</li>
+            <li>Research Q&amp;A and summarisation</li>
+            <li>Public web interface</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase upcoming">
+        <div class="phase-dot"></div>
+        <div class="phase-body">
+          <div class="phase-meta">
+            <span class="phase-label">Phase 2 — Depth Layer</span>
+            <span class="phase-status status-next">Next</span>
+          </div>
+          <ul class="phase-items">
+            <li>Domain-specific fine-tuned modules</li>
+            <li>Document ingestion (PDFs, datasheets, specs)</li>
+            <li>Semiconductor EDA tool integrations</li>
+            <li>Multi-turn reasoning &amp; memory</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-dot"></div>
+        <div class="phase-body">
+          <div class="phase-meta">
+            <span class="phase-label">Phase 3 — Collaboration</span>
+            <span class="phase-status status-future">Planned</span>
+          </div>
+          <ul class="phase-items">
+            <li>Team workspaces and shared context</li>
+            <li>Notebook &amp; design canvas integrations</li>
+            <li>Real-time co-pilot in IDEs</li>
+            <li>API access for custom workflows</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-dot"></div>
+        <div class="phase-body">
+          <div class="phase-meta">
+            <span class="phase-label">Phase 4 — Autonomy</span>
+            <span class="phase-status status-future">Future</span>
+          </div>
+          <ul class="phase-items">
+            <li>Agentic task execution across tools</li>
+            <li>Autonomous research pipelines</li>
+            <li>Self-improving domain knowledge base</li>
+            <li>Open-source model releases</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── CTA ── -->
+  <div class="cta-block">
+    <h3>Start using Medha today.</h3>
+    <p>Whether you're debugging a hardware design, writing a research paper, or building something new — Medha is ready to work alongside you.</p>
+    <div class="cta-row">
+      <a href="#" class="btn btn-primary">Try Medha →</a>
+      <a href="#" class="btn btn-ghost">View on GitHub</a>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>
