@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+# Keep large checkpoints out of Git. Upload the trained checkpoint as a deployment artifact.
+checkpoints/*.pt
+!checkpoints/.gitkeep
