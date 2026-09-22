@@ -1,19 +1,47 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090b16">
   <title>Medha AI</title>
   <style>
-    *{box-sizing:border-box} body{margin:0;background:#0b1020;color:#e8ecff;font:16px system-ui,sans-serif}
-    main{width:min(850px,100%);height:100vh;margin:auto;padding:24px;display:flex;flex-direction:column;gap:18px}
-    h1{margin:0;font-size:1.5rem} p{color:#aab5d6;margin:0}.chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:14px;padding:10px 0}
-    .message{max-width:80%;padding:13px 16px;border-radius:16px;white-space:pre-wrap;line-height:1.45}.user{align-self:end;background:#4f46e5}.bot{align-self:start;background:#18223d}
-    form{display:flex;gap:10px} input{flex:1;border:1px solid #33415f;border-radius:12px;background:#121a2f;color:#fff;padding:14px;font:inherit}button{border:0;border-radius:12px;background:#7c6cff;color:#fff;padding:0 20px;font-weight:700;cursor:pointer}
+    :root{color-scheme:dark;--bg:#090b16;--panel:#111526;--panel-2:#171c31;--line:#28304b;--text:#f4f6ff;--muted:#9faac7;--accent:#7c6cff;--accent-2:#a597ff;--user:#6656dc}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at 72% -18%,#252050 0,transparent 32rem),var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input{font:inherit} button{color:inherit}.app{min-height:100vh;display:grid;grid-template-columns:260px minmax(0,1fr)}
+    aside{background:rgba(12,15,28,.83);border-right:1px solid var(--line);padding:18px 13px;display:flex;flex-direction:column;gap:18px;backdrop-filter:blur(18px)}
+    .brand{display:flex;align-items:center;gap:11px;padding:2px 7px;font-weight:750;font-size:18px;letter-spacing:-.03em}.logo{width:31px;height:31px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent-2),#4a3fbd);border-radius:10px;box-shadow:0 6px 18px #483caa70;font-size:17px}.new-chat{width:100%;border:1px solid #5c4fc5;background:linear-gradient(135deg,#7463f5,#5a49d0);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;font-weight:650;transition:.18s}.new-chat:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .history-label{padding:0 7px;color:#7e89a9;text-transform:uppercase;font-size:10px;font-weight:750;letter-spacing:.1em}.history{display:flex;flex-direction:column;gap:3px}.conversation{width:100%;border:0;background:transparent;border-radius:8px;color:#c4cce2;padding:9px 10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.conversation.active,.conversation:hover{background:#202640;color:#fff}.account{margin-top:auto;border-top:1px solid var(--line);padding:15px 7px 2px;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}.pulse{width:8px;height:8px;background:#52d19a;border-radius:99px;box-shadow:0 0 0 4px #52d19a1c}
+    main{min-width:0;min-height:100vh;display:flex;flex-direction:column}.topbar{height:67px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(18px,4vw,48px);border-bottom:1px solid #ffffff0d}.topbar h1{font-size:15px;margin:0;font-weight:650}.topbar h1 span{color:var(--muted);font-weight:500}.status{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:99px;padding:6px 10px;color:#bac4df;font-size:12px}.status-dot{width:6px;height:6px;background:#55d29c;border-radius:99px}.menu{display:none;background:none;border:0;font-size:22px}
+    .chat{width:min(880px,100%);margin:0 auto;padding:38px clamp(18px,5vw,54px) 20px;flex:1;display:flex;flex-direction:column;gap:24px}.welcome{margin:auto 0;text-align:center;padding-bottom:5vh}.welcome .mark{margin:0 auto 19px;width:58px;height:58px;border-radius:19px;display:grid;place-items:center;background:linear-gradient(145deg,#aa9fff,#5645d2);box-shadow:0 16px 48px #4d3ed470;font-size:29px}.welcome h2{font-size:clamp(27px,4vw,42px);letter-spacing:-.05em;line-height:1.08;margin:0}.welcome p{max-width:500px;color:var(--muted);margin:13px auto 26px}.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-width:610px;margin:auto}.suggestion{color:#d8dff2;text-align:left;padding:14px 15px;border-radius:12px;border:1px solid var(--line);background:#13182a;cursor:pointer;transition:.18s}.suggestion:hover{background:#202640;border-color:#4c5580;transform:translateY(-2px)}.suggestion small{display:block;color:#8894b4;margin-top:3px}
+    .messages{display:none;flex-direction:column;gap:22px}.messages.visible{display:flex}.message{display:flex;gap:12px;max-width:780px}.message.user{align-self:flex-end;flex-direction:row-reverse}.avatar{flex:0 0 29px;height:29px;border-radius:9px;display:grid;place-items:center;background:#252b45;font-size:14px}.user .avatar{background:var(--user)}.bubble{padding:11px 14px;border-radius:4px 14px 14px 14px;background:#171d31;white-space:pre-wrap;line-height:1.6}.user .bubble{background:var(--user);border-radius:14px 4px 14px 14px}.meta{font-size:11px;color:#7783a3;margin-top:5px}.user .meta{text-align:right}.thinking{color:#aab5d0;font-style:italic}
+    .composer-wrap{width:min(880px,100%);margin:0 auto;padding:0 clamp(18px,5vw,54px) 23px;position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 24%)}.composer{border:1px solid #36405f;background:#151a2c;box-shadow:0 12px 38px #00000038;border-radius:16px;padding:7px;display:flex;align-items:end;gap:8px}.composer:focus-within{border-color:#6d60d1;box-shadow:0 0 0 3px #7162e219,0 12px 38px #00000038}.composer input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--text);padding:10px 9px}.composer input::placeholder{color:#7f8aa8}.send{width:38px;height:38px;border:0;border-radius:11px;background:var(--accent);display:grid;place-items:center;cursor:pointer;font-size:18px;transition:.18s}.send:disabled{opacity:.45;cursor:wait}.send:not(:disabled):hover{background:#9386ff}.hint{text-align:center;margin:9px 0 0;color:#6d7897;font-size:11px}
+    @media(max-width:720px){.app{grid-template-columns:1fr} aside{display:none}.menu{display:block}.topbar{height:57px;padding:0 18px}.chat{padding-top:22px}.welcome{padding-bottom:3vh}.suggestions{grid-template-columns:1fr}.status{font-size:11px}.status span:last-child{display:none}}
   </style>
 </head>
-<body><main><header><h1>Medha AI</h1><p>Local model · independently trained weights · no external AI APIs</p></header><section id="chat" class="chat"><div class="message bot">Hello. Train Medha first, then ask me anything.</div></section><form id="form"><input id="message" placeholder="Message Medha" autocomplete="off"><button>Send</button></form></main>
-<script>
-const chat=document.querySelector('#chat'), form=document.querySelector('#form'), input=document.querySelector('#message');
-function add(text, who){const el=document.createElement('div');el.className=`message ${who}`;el.textContent=text;chat.append(el);chat.scrollTop=chat.scrollHeight;return el}
-form.addEventListener('submit',async e=>{e.preventDefault();const message=input.value.trim();if(!message)return;add(message,'user');input.value='';const pending=add('Thinking…','bot');try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});const body=await r.json();pending.textContent=body.reply||body.detail||'No response.'}catch{pending.textContent='Cannot reach the local Medha server.'}});
-</script></body></html>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand"><span class="logo">✦</span> Medha AI</div>
+      <button class="new-chat" id="new-chat">＋ New chat</button>
+      <div><div class="history-label">Recent</div><div class="history"><button class="conversation active">A new conversation</button><button class="conversation">Learn about transformers</button></div></div>
+      <div class="account"><span class="pulse"></span><span>Local model ready</span></div>
+    </aside>
+    <main>
+      <header class="topbar"><button class="menu" aria-label="Open menu">☰</button><h1>Medha <span>· Local AI</span></h1><div class="status"><i class="status-dot"></i><span>Private · no external APIs</span></div></header>
+      <section class="chat" id="chat">
+        <div class="welcome" id="welcome"><div class="mark">✦</div><h2>How can I help today?</h2><p>Medha is a local language model with independently trained parameters.</p><div class="suggestions"><button class="suggestion">Explain transformers<small>Learn how language models work</small></button><button class="suggestion">Help me learn Python<small>Start with a practical roadmap</small></button><button class="suggestion">Give me a coding tip<small>Improve one step at a time</small></button><button class="suggestion">What can Medha do?<small>Explore its current capabilities</small></button></div></div>
+        <div class="messages" id="messages"></div>
+      </section>
+      <div class="composer-wrap"><form class="composer" id="form"><input id="message" aria-label="Message Medha" placeholder="Message Medha…" autocomplete="off"><button class="send" id="send" aria-label="Send message">↑</button></form><p class="hint">Medha can make mistakes. Check important information.</p></div>
+    </main>
+  </div>
+  <script>
+    const chat=document.querySelector('#chat'), form=document.querySelector('#form'), input=document.querySelector('#message'), messages=document.querySelector('#messages'), welcome=document.querySelector('#welcome'), send=document.querySelector('#send');
+    function message(text,who,thinking=false){welcome.hidden=true;messages.classList.add('visible');const wrap=document.createElement('article');wrap.className=`message ${who}`;wrap.innerHTML=`<div class="avatar">${who==='user'?'You':'✦'}</div><div><div class="bubble ${thinking?'thinking':''}"></div><div class="meta">${who==='user'?'You':'Medha'}</div></div>`;wrap.querySelector('.bubble').textContent=text;messages.append(wrap);chat.scrollTop=chat.scrollHeight;return wrap.querySelector('.bubble')}
+    async function ask(text){if(!text)return;message(text,'user');input.value='';send.disabled=true;const pending=message('Medha is thinking…','bot',true);try{const response=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})});const body=await response.json();pending.classList.remove('thinking');pending.textContent=body.reply||body.detail||'I could not generate a response.'}catch{pending.classList.remove('thinking');pending.textContent='I cannot reach the local Medha server. Please try again in a moment.'}finally{send.disabled=false;input.focus()}}
+    form.addEventListener('submit',event=>{event.preventDefault();ask(input.value.trim())});document.querySelectorAll('.suggestion').forEach(button=>button.addEventListener('click',()=>ask(button.childNodes[0].textContent.trim())));document.querySelector('#new-chat').addEventListener('click',()=>{messages.innerHTML='';messages.classList.remove('visible');welcome.hidden=false;input.focus()});
+  </script>
+</body>
+</html>
+
