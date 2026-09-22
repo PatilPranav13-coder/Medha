@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c0e14">
+  <title>Medha — AI Assistant</title>
+  <link rel="stylesheet" href="/frontend/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">M</span><span>Medha</span><small>AI</small></div>
+    <button class="new-chat" id="new-chat" type="button">＋ New chat</button>
+    <div class="history">
+      <p class="history-label">Today</p>
+      <button class="history-item active" type="button">A new conversation</button>
+    </div>
+    <p class="model-state"><i></i> Local model connection</p>
+  </aside>
+
+  <main class="app">
+    <header class="topbar">
+      <div><h1>Medha</h1><span>AI Assistant</span></div>
+      <span class="privacy">Private · no external APIs</span>
+    </header>
+
+    <section class="chat" id="chat" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <div class="welcome-mark">M</div>
+        <h2>How can I help today?</h2>
+        <p>Ask Medha a question to verify the full frontend-to-backend chat flow.</p>
+        <div class="suggestions">
+          <button type="button" data-prompt="Explain how a transformer works">Explain transformers</button>
+          <button type="button" data-prompt="Give me a Python learning tip">Help me learn Python</button>
+          <button type="button" data-prompt="What is Medha AI?">What is Medha?</button>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </section>
+
+    <div class="composer-wrap">
+      <form class="composer" id="chat-form">
+        <input id="message-input" name="message" autocomplete="off" maxlength="2000" placeholder="Message Medha…" aria-label="Message Medha">
+        <button id="send-button" type="submit" aria-label="Send message">↑</button>
+      </form>
+      <p class="disclaimer">Medha may make mistakes. Check important information.</p>
+    </div>
+  </main>
+  <script src="/frontend/script.js"></script>
+</body>
+</html>
