@@ -3,23 +3,22 @@ const input = document.querySelector("#message-input");
 const sendButton = document.querySelector("#send-button");
 const messages = document.querySelector("#messages");
 const welcome = document.querySelector("#welcome");
+let history = [];
 
 function addMessage(text, role, isTyping = false) {
   welcome.hidden = true;
   const article = document.createElement("article");
   article.className = "message " + role;
-
   const avatar = document.createElement("div");
   avatar.className = "avatar";
   avatar.textContent = role === "user" ? "You" : "M";
-
   const content = document.createElement("div");
   const bubble = document.createElement("div");
   bubble.className = "bubble" + (isTyping ? " typing" : "");
   bubble.textContent = text;
   const label = document.createElement("div");
   label.className = "label";
-  label.textContent = role === "user" ? "You" : "Medha";
+  label.textContent = role === "user" ? "You" : "Medha · local model";
   content.append(bubble, label);
   article.append(avatar, content);
   messages.append(article);
@@ -29,7 +28,7 @@ function addMessage(text, role, isTyping = false) {
 
 async function sendMessage(text) {
   const message = text.trim();
-  if (!message) return;
+  if (!message || sendButton.disabled) return;
 
   addMessage(message, "user");
   input.value = "";
@@ -40,15 +39,17 @@ async function sendMessage(text) {
     const response = await fetch("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message, history })
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || "Request failed");
     pending.classList.remove("typing");
     pending.textContent = data.response;
+    history.push({ role: "user", content: message }, { role: "assistant", content: data.response });
+    history = history.slice(-12);
   } catch (error) {
     pending.classList.remove("typing");
-    pending.textContent = "Unable to contact Medha. Please check that the FastAPI server is running.";
+    pending.textContent = error.message || "Unable to contact the local Medha server.";
   } finally {
     sendButton.disabled = false;
     input.focus();
@@ -59,13 +60,12 @@ form.addEventListener("submit", event => {
   event.preventDefault();
   sendMessage(input.value);
 });
-
 document.querySelectorAll("[data-prompt]").forEach(button => {
   button.addEventListener("click", () => sendMessage(button.dataset.prompt));
 });
-
 document.querySelector("#new-chat").addEventListener("click", () => {
   messages.innerHTML = "";
+  history = [];
   welcome.hidden = false;
   input.focus();
 });
