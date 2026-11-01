@@ -5,6 +5,7 @@ import asyncio
 import os
 import re
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -14,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-PROJECT_ROOT = __import__("pathlib").Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 OLLAMA_URL = os.getenv("MEDHA_OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
 OLLAMA_MODEL = os.getenv("MEDHA_OLLAMA_MODEL", "qwen2.5-coder:7b")
@@ -36,6 +37,7 @@ class Source(BaseModel):
     snippet: str = ""
     attribution: str = ""
     license: str = ""
+    retrieved: bool = True
 
 
 class ChatResponse(BaseModel):
@@ -79,6 +81,9 @@ def _platform_guides(platform: str) -> list[Source]:
             Source(title="React Native documentation", url="https://reactnative.dev/docs/getting-started", snippet="Official React Native documentation for native iOS and Android apps."),
         ],
     }
+    for group in guides.values():
+        for source in group:
+            source.retrieved = False
     return guides.get(platform, [])
 
 
@@ -99,7 +104,12 @@ async def _search_mdn(client: httpx.AsyncClient, query: str) -> list[Source]:
         {"q": query, "locale": "en-US"},
     )
     sources: list[Source] = []
-    for item in data.get("documents", [])[:3]:
+    documents = data.get("documents", [])
+    if not isinstance(documents, list):
+        return []
+    for item in documents[:3]:
+        if not isinstance(item, dict):
+            continue
         path = item.get("mdn_url", "")
         url = path if path.startswith("https://") else "https://developer.mozilla.org" + path
         if not _trusted_url(url, {"developer.mozilla.org"}):
@@ -120,7 +130,12 @@ async def _search_microsoft(client: httpx.AsyncClient, query: str) -> list[Sourc
         {"search": query, "locale": "en-us"},
     )
     sources: list[Source] = []
-    for item in data.get("results", [])[:3]:
+    items = data.get("results", [])
+    if not isinstance(items, list):
+        return []
+    for item in items[:3]:
+        if not isinstance(item, dict):
+            continue
         url = item.get("url", "")
         if not _trusted_url(url, {"learn.microsoft.com"}):
             continue
@@ -139,7 +154,12 @@ async def _search_stackoverflow(client: httpx.AsyncClient, query: str) -> list[S
         {"q": query, "site": "stackoverflow", "pagesize": "3", "order": "desc", "sort": "relevance"},
     )
     sources: list[Source] = []
-    for item in data.get("items", [])[:3]:
+    items = data.get("items", [])
+    if not isinstance(items, list):
+        return []
+    for item in items[:3]:
+        if not isinstance(item, dict):
+            continue
         url = item.get("link", "")
         if not _trusted_url(url, {"stackoverflow.com"}):
             continue
@@ -150,12 +170,12 @@ async def _search_stackoverflow(client: httpx.AsyncClient, query: str) -> list[S
             url=url,
             snippet=_plain_text(item.get("excerpt", "")),
             attribution=f"By {author}",
-            license="CC BY-SA; attribution required. See https://creativecommons.org/licenses/by-sa/4.0/",
+            license="CC BY-SA (version depends on post); attribution required. See the linked post license.",
         ))
     return sources
 
 
-async def _public_sources(query: str, platform: str) -> list[Source]:
+async def _public_sources(query: str, platform: str) -> tuple[list[Source], bool]:
     # Requests go only to fixed public search APIs; user input is never treated as a URL.
     search_query = re.sub(r"\s+", " ", query).strip()[:400]
     headers = {"User-Agent": "Medha-Coding-Tutor/1.0 (public documentation search)"}
@@ -169,14 +189,16 @@ async def _public_sources(query: str, platform: str) -> list[Source]:
 
     sources = _platform_guides(platform)
     seen = {source.url for source in sources}
+    has_live_results = False
     for result in results:
         if isinstance(result, Exception):
             continue
         for source in result:
+            has_live_results = has_live_results or source.retrieved
             if source.url not in seen:
                 seen.add(source.url)
                 sources.append(source)
-    return sources[:8]
+    return sources[:8], has_live_results
 
 
 def _system_prompt(request: ChatRequest, sources: list[Source]) -> str:
@@ -238,7 +260,10 @@ async def chat(request: ChatRequest) -> ChatResponse:
     if not message:
         raise HTTPException(status_code=422, detail="Message cannot be empty.")
 
-    sources = await _public_sources(message, request.platform) if request.use_public_sources else []
+    if request.use_public_sources:
+        sources, has_live_results = await _public_sources(message, request.platform)
+    else:
+        sources, has_live_results = [], False
     payload = {
         "model": OLLAMA_MODEL,
         "stream": False,
@@ -270,5 +295,5 @@ async def chat(request: ChatRequest) -> ChatResponse:
         response=answer,
         sources=sources,
         model=OLLAMA_MODEL,
-        knowledge_mode="web-grounded" if sources and request.use_public_sources else "model-only",
+        knowledge_mode="web-grounded" if has_live_results else "model-only",
     )
