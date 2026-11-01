@@ -96,7 +96,11 @@ form.addEventListener("submit", event => {
 });
 
 document.querySelectorAll("[data-prompt]").forEach(button => {
-  button.addEventListener("click", () => sendMessage(button.dataset.prompt));
+  button.addEventListener("click", () => {
+    if (button.dataset.mode) modeSelect.value = button.dataset.mode;
+    if (button.dataset.platform) platformSelect.value = button.dataset.platform;
+    sendMessage(button.dataset.prompt);
+  });
 });
 
 document.querySelector("#new-chat").addEventListener("click", () => {
