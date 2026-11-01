@@ -6,7 +6,7 @@ projects:
       - name: production
         databases:
           - name: medha-db
-            databaseName: medha
+            databaseName: medha_db
             plan: free
             region: singapore
             postgresMajorVersion: "16"
