@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0c0e14">
-  <title>Medha — AI Assistant</title>
+  <title>Medha — Coding Tutor</title>
   <link rel="stylesheet" href="/frontend/style.css">
 </head>
 <body>
@@ -15,35 +15,57 @@
       <p class="history-label">Today</p>
       <button class="history-item active" type="button">A new conversation</button>
     </div>
-    <p class="model-state"><i></i> Local model connection</p>
+    <p class="model-state"><i></i> Ollama local model</p>
   </aside>
 
   <main class="app">
     <header class="topbar">
-      <div><h1>Medha</h1><span>AI Assistant</span></div>
-      <span class="privacy">Private · no external APIs</span>
+      <div><h1>Medha</h1><span>Coding Tutor</span></div>
+      <span class="privacy">Local model · public lookup optional</span>
     </header>
 
     <section class="chat" id="chat" aria-live="polite">
       <div class="welcome" id="welcome">
         <div class="welcome-mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 34V14l15 15 15-15v20" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="29" r="3" fill="currentColor"/></svg></div>
-        <h2>How can I help today?</h2>
-        <p>Ask Medha a question to verify the full frontend-to-backend chat flow.</p>
+        <h2>Learn to code. Build something.</h2>
+        <p>Ask Medha to teach programming step by step or help build an app for iPhone, iPad, Mac, Android, or Windows.</p>
         <div class="suggestions">
-          <button type="button" data-prompt="Explain how a transformer works">Explain transformers</button>
-          <button type="button" data-prompt="Give me a Python learning tip">Help me learn Python</button>
-          <button type="button" data-prompt="What is Medha AI?">What is Medha?</button>
+          <button type="button" data-mode="teach" data-platform="auto" data-prompt="Teach me Python variables with a small runnable example and practice exercise">Teach me Python</button>
+          <button type="button" data-mode="build" data-platform="cross_platform" data-prompt="Build a Flutter starter app that can target iPhone, iPad, Android, macOS, and Windows. Show the project structure and how to run it.">Build for all platforms</button>
+          <button type="button" data-mode="build" data-platform="ios" data-prompt="Show me a small native SwiftUI counter app for iPhone and explain each file">Make an iPhone app</button>
         </div>
       </div>
       <div class="messages" id="messages"></div>
     </section>
 
     <div class="composer-wrap">
-      <form class="composer" id="chat-form">
-        <input id="message-input" name="message" autocomplete="off" maxlength="2000" placeholder="Message Medha…" aria-label="Message Medha">
-        <button id="send-button" type="submit" aria-label="Send message">↑</button>
+      <form class="composer-area" id="chat-form">
+        <div class="composer-options">
+          <label class="option-label">Help mode
+            <select id="mode-select" aria-label="Help mode">
+              <option value="teach">Teach me</option>
+              <option value="build">Build an app</option>
+            </select>
+          </label>
+          <label class="option-label">Target
+            <select id="platform-select" aria-label="Target platform">
+              <option value="auto">Choose from my request</option>
+              <option value="ios">iPhone · SwiftUI</option>
+              <option value="ipados">iPad · SwiftUI</option>
+              <option value="macos">Mac · SwiftUI</option>
+              <option value="android">Android · Kotlin</option>
+              <option value="windows">Windows · WinUI</option>
+              <option value="cross_platform">All platforms · Flutter</option>
+            </select>
+          </label>
+          <label class="source-toggle"><input id="public-sources" type="checkbox" checked> Search public sources</label>
+        </div>
+        <div class="composer">
+          <input id="message-input" name="message" autocomplete="off" maxlength="8000" placeholder="What would you like to learn or build?" aria-label="Message Medha">
+          <button id="send-button" type="submit" aria-label="Send message">↑</button>
+        </div>
       </form>
-      <p class="disclaimer">Medha may make mistakes. Check important information.</p>
+      <p class="disclaimer">When enabled, your question is sent to public documentation search services. Review generated code before running it.</p>
     </div>
   </main>
   <script src="/frontend/script.js"></script>
