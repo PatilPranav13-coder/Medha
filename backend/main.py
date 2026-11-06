@@ -30,7 +30,7 @@ def make_project_plan(brief: str) -> dict:
     """Create a safe, deterministic starter plan (not an LLM-generated plan)."""
     cleaned = " ".join(brief.split())
     words = re.findall(r"[A-Za-z0-9]+", cleaned)
-    name = " ".join(words[:6]).title() or "Untitled Project"
+    name = " ".join(words[:5]).title() or "Untitled Project"
     if len(name) > 54:
         name = name[:51].rstrip() + "..."
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "new-project"
