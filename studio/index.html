@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101116"><title>Medha Studio</title>
+  <link rel="stylesheet" href="/studio/studio.css">
+</head>
+<body>
+  <aside class="rail">
+    <a class="brand" href="/" aria-label="Medha home"><span class="mark">M</span><span>medha<small>STUDIO</small></span></a>
+    <button class="primary" id="new-project">＋ New project</button>
+    <p class="eyebrow">WORKSPACE</p>
+    <nav><a class="selected" href="#workspace">⌘ &nbsp; Workspace</a><a href="#files">▤ &nbsp; Files</a><a href="#terminal">›_ &nbsp; Terminal</a><a href="#preview">▣ &nbsp; Preview</a></nav>
+    <div class="rail-bottom"><span class="status-dot"></span> Studio environment <small>Foundation</small></div>
+  </aside>
+  <main class="main">
+    <header class="top"><div><span class="crumb">Projects</span><span class="slash">/</span><strong id="project-name">Untitled project</strong></div><div class="top-actions"><span class="local-pill">● Local workspace</span><a href="/">Back to Medha ↗</a></div></header>
+    <section class="intro" id="workspace"><div><p class="eyebrow">MEDHA AI STUDIO</p><h1>What are we building?</h1><p>Describe an idea. Medha will help turn it into a structured project.</p></div><div class="orb">M</div></section>
+    <section class="prompt-card"><label for="idea">PROJECT BRIEF</label><textarea id="idea" rows="3" placeholder="Build a responsive portfolio website with a home page, projects gallery and contact form…"></textarea><div class="prompt-footer"><span>Be clear about features, platform and preferred technologies.</span><button class="primary" id="create">Generate project plan <span>→</span></button></div></section>
+    <section class="suggestions"><button data-idea="Create a responsive personal portfolio website using HTML, CSS and JavaScript. Include a home page, projects section and contact form.">◈ &nbsp; Portfolio website</button><button data-idea="Create a task manager web app with task creation, status filters and local persistence.">▦ &nbsp; Task manager</button><button data-idea="Create a simple product landing page with responsive layout, features, pricing and FAQ sections.">✳ &nbsp; Landing page</button></section>
+    <section class="workbench">
+      <div class="panel files" id="files"><div class="panel-head"><span>PROJECT EXPLORER</span><button title="Refresh">↻</button></div><div class="empty"><span>▤</span><strong>No project yet</strong><p>Create a project brief to get started.</p></div></div>
+      <div class="panel output"><div class="panel-head"><span>BUILD PLAN</span><span class="tag">READY</span></div><div id="plan" class="plan-empty"><div class="spark">✳</div><strong>Your project plan will appear here</strong><p>Medha will outline the app structure, features and next steps before generating files.</p></div></div>
+      <div class="panel preview" id="preview"><div class="panel-head"><span>LIVE PREVIEW</span><span class="tag muted">NOT RUNNING</span></div><div class="preview-empty"><div class="browser-dots"><i></i><i></i><i></i></div><span class="preview-icon">▣</span><strong>Preview your app here</strong><p>Your application preview will appear when a runnable project is connected.</p></div></div>
+      <div class="panel terminal" id="terminal"><div class="panel-head"><span>TERMINAL</span><span class="tag muted">SAFE MODE</span></div><pre id="terminal-content"><span class="dim">Medha Studio terminal</span>
+Workspace is ready.
+No commands have been executed.</pre></div>
+    </section>
+    <footer>Medha Studio <span>Build thoughtfully. Ship confidently.</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/studio/studio.js"></script>
+</body></html>
