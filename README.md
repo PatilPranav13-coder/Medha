@@ -35,9 +35,9 @@ The first Studio foundation includes:
 
 ## Run the project-plan unit tests
 
-\`\`\`bash
+```bash
 python -m unittest backend.test_main
-\`\`\`
+```
 
 ## Project layout
 
