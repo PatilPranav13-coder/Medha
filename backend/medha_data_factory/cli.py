@@ -14,6 +14,7 @@ from .github import discover_repositories, download_selected_repository
 from .sandbox import verify_in_docker
 from .quality import score_sft_candidate
 from .scaling import build_progress_report, load_target_plan
+from .shards import build_shards
 
 
 def _write_jsonl(path: Path, record: dict) -> None:
@@ -95,6 +96,11 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--repository-index", required=True, type=Path)
     score.add_argument("--out", type=Path)
 
+    shard = commands.add_parser("shard-jsonl", help="Stream-deduplicate and create bounded train/validation/test JSONL shards.")
+    shard.add_argument("--input", required=True, nargs="+", type=Path)
+    shard.add_argument("--out", required=True, type=Path)
+    shard.add_argument("--examples-per-shard", type=int, default=100000)
+
     dedupe = commands.add_parser("deduplicate", help="Exact-dedupe JSONL records and preserve duplicate provenance.")
     dedupe.add_argument("--input", required=True, nargs="+", type=Path)
     dedupe.add_argument("--out", required=True, type=Path)
@@ -127,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.out:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+        elif args.command == "shard-jsonl":
+            result = build_shards(args.input, args.out, examples_per_shard=args.examples_per_shard)
         elif args.command == "deduplicate":
             result = deduplicate_jsonl(args.input, args.out, args.ledger)
         elif args.command == "verify":
