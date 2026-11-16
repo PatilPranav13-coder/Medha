@@ -66,6 +66,56 @@ def detect_language(path: Path) -> str | None:
     return EXTENSIONS.get(path.suffix.lower())
 
 
+def detect_frameworks(repository_path: Path) -> list[str]:
+    """Infer framework/tool tags from common manifests and project layout only."""
+    root = repository_path.resolve()
+    manifests = [
+        "package.json", "pyproject.toml", "requirements.txt", "Pipfile",
+        "pom.xml", "build.gradle", "build.gradle.kts", "Cargo.toml",
+        "go.mod", "pubspec.yaml", "Package.swift",
+    ]
+    evidence = ""
+    for relative in manifests:
+        candidate = root / relative
+        if candidate.is_file() and not candidate.is_symlink():
+            try:
+                evidence += "\\n" + candidate.read_text(encoding="utf-8", errors="ignore")[:500_000]
+            except OSError:
+                continue
+    layout = " ".join(p.as_posix().lower() for p in root.iterdir())
+    haystack = (evidence + " " + layout).lower()
+    rules = {
+        "react": (r"\\breact\\b",),
+        "nextjs": (r"next\\s*['\"]", r"next\\s*[:=]", r"next\\.config"),
+        "vue": (r"\\bvue\\b", r"vite-plugin-vue"),
+        "angular": (r"@angular/core",),
+        "svelte": (r"\\bsvelte\\b",),
+        "express": (r"\\bexpress\\b",),
+        "fastapi": (r"\\bfastapi\\b",),
+        "django": (r"\\bdjango\\b",),
+        "flask": (r"\\bflask\\b",),
+        "spring": (r"spring-boot", r"org\\.springframework"),
+        "ktor": (r"io\\.ktor",),
+        "swiftui": (r"\\bswiftui\\b",),
+        "uikit": (r"\\buikit\\b",),
+        "react-native": (r"react-native",),
+        "flutter": (r"\\bflutter\\b", r"flutter\\."),
+        "android": (r"com\\.android\\.application", r"androidmanifest\\.xml"),
+        "pytest": (r"\\bpytest\\b",),
+        "jest": (r"\\bjest\\b",),
+        "vitest": (r"\\bvitest\\b",),
+        "playwright": (r"\\bplaywright\\b",),
+        "cypress": (r"\\bcypress\\b",),
+        "sqlalchemy": (r"\\bsqlalchemy\\b",),
+        "prisma": (r"\\bprisma\\b",),
+    }
+    found = []
+    for framework, patterns in rules.items():
+        if any(re.search(pattern, haystack) for pattern in patterns):
+            found.append(framework)
+    return sorted(set(found))
+
+
 def excluded_reason(path: Path) -> str | None:
     parts = {part.lower() for part in path.parts}
     if parts & EXCLUDED_DIRS:
@@ -166,6 +216,7 @@ def ingest_local_repository(
     repository_id = source["repository_url"].rstrip("/").lower()
     revision = source.get("revision") or _git_revision(root)
     split = stable_split(repository_id, seed)
+    frameworks = detect_frameworks(root)
     seen: dict[str, dict[str, Any]] = {}
     records: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
@@ -241,6 +292,7 @@ def ingest_local_repository(
                 "relative_path": relative,
                 "repository_revision": revision,
                 "dataset_split": split,
+                "framework_tags": frameworks,
                 "file_bytes": len(raw),
             },
             "provenance": {
@@ -285,6 +337,7 @@ def ingest_local_repository(
         "reviewer": source["reviewer"],
         "reviewed_at": source["reviewed_at"],
         "dataset_split": split,
+        "framework_tags": frameworks,
         "seed": seed,
         "files_indexed": len(records),
         "bytes_indexed": total,
@@ -458,6 +511,7 @@ def inspect_repository(repository_path: Path) -> dict[str, Any]:
         "total_bytes": total_bytes,
         "excluded_or_unsafe_count": skipped,
         "languages": dict(sorted(language_counts.items())),
+        "frameworks": detect_frameworks(root),
         "files": files[:500],
         "files_truncated": len(files) > 500,
         "execution_performed": False,
