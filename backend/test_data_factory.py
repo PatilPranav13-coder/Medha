@@ -327,8 +327,8 @@ class MedhaDataFactoryTests(unittest.TestCase):
             {"record_id":"test-a","text":"same content","dataset_split":"test"},
             {"record_id":"test-b","text":"four","dataset_split":"test"}
         ]
-        source_train.write_text("".join(json.dumps(row)+"\\n" for row in train_rows),encoding="utf-8")
-        source_test.write_text("".join(json.dumps(row)+"\\n" for row in test_rows),encoding="utf-8")
+        source_train.write_text("".join(json.dumps(row)+"\n" for row in train_rows),encoding="utf-8")
+        source_test.write_text("".join(json.dumps(row)+"\n" for row in test_rows),encoding="utf-8")
         output = self.root / "shards"
         manifest = build_shards([source_train, source_test], output, examples_per_shard=1)
         self.assertEqual(manifest["input_rows"], 5)
