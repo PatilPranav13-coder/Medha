@@ -109,10 +109,13 @@ def build_progress_report(plan: dict[str, Any], counts: dict[str, Any]) -> dict[
         warnings.append("Some counted examples have not passed the quality gate.")
     if licence_approved < total:
         warnings.append("Some counted examples do not yet have approved source-rights evidence.")
-    if full_stack < min(total, plan["full_stack_min_examples"]):
-        warnings.append("Full-stack coverage is below its minimum target.")
-
     target = plan["target_unique_examples"]
+    required_full_stack_at_current_scale = (
+        plan["full_stack_min_examples"] * total + target - 1
+    ) // target
+    if full_stack < required_full_stack_at_current_scale:
+        warnings.append("Full-stack coverage is below its scaled minimum target.")
+
     return {
         "plan_version": plan["plan_version"],
         "target_unique_examples": target,
@@ -121,8 +124,9 @@ def build_progress_report(plan: dict[str, Any], counts: dict[str, Any]) -> dict[
         "overall_completion_percent": round(total / target * 100, 4),
         "full_stack": {
             "minimum_target": plan["full_stack_min_examples"],
+            "required_at_current_scale": required_full_stack_at_current_scale,
             "actual": full_stack,
-            "remaining": max(0, plan["full_stack_min_examples"] - full_stack),
+            "remaining_to_final_target": max(0, plan["full_stack_min_examples"] - full_stack),
         },
         "language_primary_quotas": language,
         "task_type_quotas": tasks,
