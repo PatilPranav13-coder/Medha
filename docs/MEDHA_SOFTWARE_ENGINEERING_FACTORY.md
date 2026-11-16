@@ -40,6 +40,14 @@ python -m backend.medha_data_factory harvest \
   --out data/software_engineering/owner-repository \
   --max-files 500 --max-total-bytes 15000000
 
+# Stream and de-duplicate a large corpus into 100k-example shards.
+# Inputs may contain train/validation/test rows. When identical content appears
+# in several splits, the test copy wins so it cannot leak into training.
+python -m backend.medha_data_factory shard-jsonl \
+  --input data/pretraining_train.jsonl data/sft_train.jsonl data/validation.jsonl data/test.jsonl \
+  --out data/medha_shards/v1 \
+  --examples-per-shard 100000
+
 # Optional test execution. Requires a trusted local runner image with dependencies pre-installed.
 python -m backend.medha_data_factory verify \
   --repo /path/to/project --image medha-python-test:local \
@@ -66,6 +74,7 @@ Discovery metadata is not licence approval. Repository-level licence badges may 
 - Docker verification is opt-in, no-network, non-root, read-only-source, resource-limited and time-limited.
 - Repositories are assigned deterministic 90/5/5 splits as indivisible groups.
 - Exact duplicate handling prefers test, then validation, then train and writes a provenance ledger.
+- The streaming shard builder uses two input passes and a temporary SQLite fingerprint index; record bodies are not accumulated in RAM. It emits per-split shards and a SHA-256 manifest.
 - No source licence is automatically approved. Unknown/held sources are blocked.
 - The data factory prepares training records but does not fine-tune Medha or change model weights.
 
