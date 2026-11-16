@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.medha_data_factory.core import (
-    deduplicate_jsonl, ingest_local_repository, inspect_repository,
+    deduplicate_jsonl, detect_frameworks, ingest_local_repository, inspect_repository,
     load_source_manifest, make_evaluation_record, make_preference_record,
     promote_reviewed_candidate, stable_split, validate_source_policy,
 )
@@ -70,6 +70,19 @@ class MedhaDataFactoryTests(unittest.TestCase):
         manifest.write_text(json.dumps({"manifest_version": "1.0.0", "sources": [held]}), encoding="utf-8")
         with self.assertRaises(PermissionError):
             load_source_manifest(manifest, self.source["source_id"])
+
+    def test_framework_detection_reads_dependency_manifests(self):
+        (self.repo / "package.json").write_text(
+            json.dumps({"dependencies": {"react": "^19.0.0", "next": "^15.0.0", "react-native": "^0.8"}}),
+            encoding="utf-8",
+        )
+        (self.repo / "requirements.txt").write_text("fastapi>=0.110\\npytest>=8.0\\n", encoding="utf-8")
+        frameworks = detect_frameworks(self.repo)
+        self.assertIn("react", frameworks)
+        self.assertIn("nextjs", frameworks)
+        self.assertIn("react-native", frameworks)
+        self.assertIn("fastapi", frameworks)
+        self.assertIn("pytest", frameworks)
 
     def test_deterministic_repository_split(self):
         self.assertEqual(stable_split("https://github.com/example/repo", 21), stable_split("https://github.com/example/repo", 21))
