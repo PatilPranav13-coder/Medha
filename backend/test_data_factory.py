@@ -237,7 +237,8 @@ class MedhaDataFactoryTests(unittest.TestCase):
         ]
         request_bytes.return_value=safe
         destination=self.root/"harvest"
-        result=download_selected_repository("example-org/demo-repo",self.source,destination,max_files=10,max_file_bytes=1024,max_total_bytes=4096)
+        harvest_source = dict(self.source, revision=None)
+        result=download_selected_repository("example-org/demo-repo",harvest_source,destination,max_files=10,max_file_bytes=1024,max_total_bytes=4096)
         self.assertEqual(result["revision"],"c"*40)
         self.assertEqual(result["files_downloaded"],1)
         self.assertIn("/"+("c"*40)+"/",request_bytes.call_args.args[0])
