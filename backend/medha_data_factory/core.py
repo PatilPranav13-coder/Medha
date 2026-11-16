@@ -175,6 +175,9 @@ def ingest_local_repository(
         if not path.is_file():
             continue
         try:
+            if path.is_symlink():
+                rejections.append({"path": str(path.relative_to(root)), "reason": "symlink_not_ingested"})
+                continue
             resolved = path.resolve(strict=True)
             relative = resolved.relative_to(root).as_posix()
         except (OSError, ValueError):
@@ -288,18 +291,37 @@ def ingest_local_repository(
         "pipeline_version": PIPELINE_VERSION,
     }
     (output / "repository_index.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+    source_paths = [r["source_metadata"]["relative_path"] for r in records]
+    code_paths = [r["source_metadata"]["relative_path"] for r in records if r["content_type"] == "code"]
+    test_paths = [p for p in source_paths if Path(p).name.lower().startswith(("test_", "spec.")) or "/tests/" in f"/{p.lower()}/" or p.lower().endswith((".test.js", ".spec.js", ".test.ts", ".spec.ts", ".test.tsx", ".spec.tsx"))]
     candidates = [{
         "candidate_id": f"{repository_id}:repository-understanding",
-        "task_type": "instruction",
-        "prompt": f"Explain the architecture and responsibilities of the repository at {source['repository_url']}. Identify its entry points, modules, data flow, dependencies, tests and likely extension points.",
-        "context_paths": [r["source_metadata"]["relative_path"] for r in records[:100]],
-        "training_eligible": False,
-        "requires_human_review": True,
-        "verification_required": True,
-        "dataset_split": split,
-        "source_repository": repository_id,
-        "source_revision": revision,
+        "task_type": "architecture_design",
+        "prompt": f"Explain the architecture and responsibilities of the repository at {source['repository_url']}. Identify entry points, modules, data flow, dependencies, API/database boundaries, tests, failure modes and safe extension points.",
+        "context_paths": source_paths[:100],
+        "training_eligible": False, "requires_human_review": True,
+        "verification_required": True, "dataset_split": split,
+        "source_repository": repository_id, "source_revision": revision,
     }]
+    for source_path in code_paths[:20]:
+        candidates.append({
+            "candidate_id": f"{repository_id}:explain:{sha256_text(source_path)[:12]}",
+            "task_type": "repository_explanation",
+            "prompt": f"Explain the purpose, inputs, outputs, dependencies, side effects, edge cases and error handling of {source_path} in this repository.",
+            "context_paths": [source_path], "training_eligible": False,
+            "requires_human_review": True, "verification_required": False,
+            "dataset_split": split, "source_repository": repository_id,
+            "source_revision": revision,
+        })
+        candidates.append({
+            "candidate_id": f"{repository_id}:tests:{sha256_text(source_path)[:12]}",
+            "task_type": "test_generation",
+            "prompt": f"Design and implement meaningful unit or integration tests for {source_path}. Cover normal behaviour, edge cases, invalid input and regressions. Do not assume the implementation is correct.",
+            "context_paths": [source_path] + test_paths[:10],
+            "training_eligible": False, "requires_human_review": True,
+            "verification_required": True, "dataset_split": split,
+            "source_repository": repository_id, "source_revision": revision,
+        })
     _write_jsonl(output / "task_candidates.jsonl", candidates)
     report = {
         "repository": repository_id, "revision": revision, "dataset_split": split,
@@ -410,6 +432,9 @@ def inspect_repository(repository_path: Path) -> dict[str, Any]:
         if not path.is_file():
             continue
         try:
+            if path.is_symlink():
+                skipped += 1
+                continue
             resolved = path.resolve(strict=True)
             relative = resolved.relative_to(root).as_posix()
         except (OSError, ValueError):
