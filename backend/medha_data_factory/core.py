@@ -230,6 +230,7 @@ def ingest_local_repository(
             "record_id": f"{repository_id}:{relative}:{content_hash[:12]}",
             "text": normalized,
             "content_type": "code" if is_code else "text",
+            "dataset_split": split,
             "domain_tags": tags,
             "language": language,
             "source_metadata": {
@@ -302,9 +303,9 @@ def ingest_local_repository(
     _write_jsonl(output / "task_candidates.jsonl", candidates)
     report = {
         "repository": repository_id, "revision": revision, "dataset_split": split,
-        "files_written": len(records), "bytes_written": total,
+        "files_written": len(records), "records_written": len(records), "bytes_written": total,
         "duplicates_removed": sum(r["reason"] == "exact_duplicate" for r in rejections),
-        "rejections": len(rejections), "execution_performed": False,
+        "rejections": len(rejections), "execution_performed": False, "network_access_performed": False,
         "network_access_performed": False, "schema_validation": "passed",
         "output_dir": str(output),
     }
@@ -338,6 +339,8 @@ def promote_reviewed_candidate(
         verification = review.get("verification_report") or {}
         if verification.get("status") != "passed" or verification.get("exit_code") != 0:
             raise PermissionError("Executable task requires a successful isolated verification report.")
+        if review.get("build_passed") is not True or int(review.get("tests_passed") or 0) < 1:
+            raise PermissionError("Executable task requires passing build and at least one test.")
         if verification.get("network_enabled") is not False or verification.get("source_mount_read_only") is not True:
             raise PermissionError("Verification environment does not meet isolation requirements.")
     answer = (review.get("assistant_answer") or "").strip()
