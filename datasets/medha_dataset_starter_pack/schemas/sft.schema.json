@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Medha SFT Record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "record_id",
+    "messages",
+    "task_type",
+    "domain_tags",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ]
+          },
+          "content": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tool_call_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "task_type": {
+      "enum": [
+        "conversation",
+        "instruction",
+        "math_solution",
+        "code_generation",
+        "debugging",
+        "architecture_design",
+        "research_synthesis",
+        "other"
+      ]
+    },
+    "domain_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "quality_checks": {
+      "type": "object",
+      "properties": {
+        "human_reviewed": {
+          "type": "boolean"
+        },
+        "factuality_pass": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "tests_passed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "safety_reviewed": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "source_metadata": {
+      "type": "object"
+    },
+    "synthetic": {
+      "type": "boolean",
+      "default": false
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "source_dataset",
+        "source_revision",
+        "source_split",
+        "source_record_id",
+        "declared_license",
+        "underlying_license",
+        "content_sha256",
+        "pipeline_version",
+        "usage_status"
+      ],
+      "properties": {
+        "source_dataset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_config": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_split": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_record_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "declared_license": {
+          "type": "string"
+        },
+        "underlying_license": {
+          "type": "string"
+        },
+        "usage_status": {
+          "enum": [
+            "approved",
+            "approved_with_attribution",
+            "conditional",
+            "hold",
+            "excluded",
+            "unknown"
+          ]
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "duplicate_cluster_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transformation_version": {
+          "type": "string"
+        },
+        "pipeline_version": {
+          "type": "string"
+        },
+        "acquired_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "selection_seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "source_metadata": {
+          "type": "object"
+        },
+        "attribution_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
