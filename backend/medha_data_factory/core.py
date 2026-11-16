@@ -85,33 +85,33 @@ def detect_frameworks(repository_path: Path) -> list[str]:
     layout = " ".join(p.as_posix().lower() for p in root.iterdir())
     haystack = (evidence + " " + layout).lower()
     rules = {
-        "react": (r"\\breact\\b",),
-        "nextjs": (r"next\\s*['\"]", r"next\\s*[:=]", r"next\\.config"),
-        "vue": (r"\\bvue\\b", r"vite-plugin-vue"),
-        "angular": (r"@angular/core",),
-        "svelte": (r"\\bsvelte\\b",),
-        "express": (r"\\bexpress\\b",),
-        "fastapi": (r"\\bfastapi\\b",),
-        "django": (r"\\bdjango\\b",),
-        "flask": (r"\\bflask\\b",),
-        "spring": (r"spring-boot", r"org\\.springframework"),
-        "ktor": (r"io\\.ktor",),
-        "swiftui": (r"\\bswiftui\\b",),
-        "uikit": (r"\\buikit\\b",),
-        "react-native": (r"react-native",),
-        "flutter": (r"\\bflutter\\b", r"flutter\\."),
-        "android": (r"com\\.android\\.application", r"androidmanifest\\.xml"),
-        "pytest": (r"\\bpytest\\b",),
-        "jest": (r"\\bjest\\b",),
-        "vitest": (r"\\bvitest\\b",),
-        "playwright": (r"\\bplaywright\\b",),
-        "cypress": (r"\\bcypress\\b",),
-        "sqlalchemy": (r"\\bsqlalchemy\\b",),
-        "prisma": (r"\\bprisma\\b",),
+        "react": ('"react"', '"react-dom"'),
+        "nextjs": ('"next"', "next.config."),
+        "vue": ('"vue"', "vite-plugin-vue", "vue.config."),
+        "angular": ("@angular/core",),
+        "svelte": ('"svelte"',),
+        "express": ('"express"',),
+        "fastapi": ("fastapi",),
+        "django": ("django",),
+        "flask": ("flask",),
+        "spring": ("spring-boot", "org.springframework"),
+        "ktor": ("io.ktor",),
+        "swiftui": ("swiftui",),
+        "uikit": ("uikit",),
+        "react-native": ("react-native",),
+        "flutter": ("flutter",),
+        "android": ("com.android.application", "androidmanifest.xml"),
+        "pytest": ("pytest",),
+        "jest": ('"jest"',),
+        "vitest": ('"vitest"',),
+        "playwright": ("playwright",),
+        "cypress": ("cypress",),
+        "sqlalchemy": ("sqlalchemy",),
+        "prisma": ("prisma",),
     }
     found = []
-    for framework, patterns in rules.items():
-        if any(re.search(pattern, haystack) for pattern in patterns):
+    for framework, markers in rules.items():
+        if any(marker in haystack for marker in markers):
             found.append(framework)
     return sorted(set(found))
 
