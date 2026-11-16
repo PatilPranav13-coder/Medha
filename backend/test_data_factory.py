@@ -230,10 +230,10 @@ class MedhaDataFactoryTests(unittest.TestCase):
             {"private":False,"archived":False,"disabled":False,"license":{"spdx_id":"Apache-2.0"},"default_branch":"main","html_url":self.source["repository_url"]},
             {"object":{"type":"commit","sha":"c"*40}},
             {"tree":{"sha":"d"*40}},
-            {"tree":{"truncated":False,"tree":[
+            {"truncated":False,"tree":[
                 {"type":"blob","mode":"100644","path":"src/main.py","size":len(safe),"sha":"1"*40},
                 {"type":"blob","mode":"100644","path":".env","size":20,"sha":"2"*40},
-            ]}},
+            ]},
         ]
         request_bytes.return_value=safe
         destination=self.root/"harvest"
