@@ -64,7 +64,16 @@
         "debugging",
         "architecture_design",
         "research_synthesis",
-        "other"
+        "other",
+        "refactoring",
+        "test_generation",
+        "repository_explanation",
+        "performance_optimization",
+        "api_design",
+        "database_design",
+        "mobile_development",
+        "frontend_design",
+        "backend_development"
       ]
     },
     "domain_tags": {
