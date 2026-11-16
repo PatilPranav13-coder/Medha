@@ -7,7 +7,7 @@ This is an engineering risk register, not legal advice. Re-check terms for the e
 | FineWeb-Edu | ODC-By 1.0 + CommonCrawl Terms of Use | Conditional. Preserve ODC attribution. ODC-By covers database rights and does not automatically clear independent rights in every web page's content. |
 | FineWeb | ODC-By 1.0 + CommonCrawl Terms of Use | Conditional for the same reason. |
 | Proof-Pile-2 | Underlying component licences remain unchanged | Component-level approval only; parse meta and hold unknown/restricted components. |
-| NuminaMath-CoT | Apache-2.0 declared by card | Conditional; source material includes external PDFs/forums and synthetic examples. Check underlying rights and independently validate solutions. |
+| NuminaMath-CoT (the exact AI-MO URL supplied) | Conflicting signals: Hugging Face page header shows Apache-2.0, while README metadata and licence body say CC-BY-NC-4.0; separate project-numina repo page says Apache-2.0 | HOLD for commercial training until maintainers clarify the governing licence for the exact repository/revision. Even after clarification, check source-rights and validate maths. |
 | OASST1 | Apache-2.0 | Dataset layer is permissive; still perform PII, safety, spam and privacy filtering. |
 | HelpSteer2 | CC-BY-4.0 | Attribution required; keep provider, licence URL and transformation notes. |
 | IndicCorpV2 | Card says CC-0 for datasets created by the authors | Conditional until underlying data-source and privacy checks pass. Retain language provenance. |
