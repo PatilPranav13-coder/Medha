@@ -1,0 +1,146 @@
+{
+  "manifest_version": "1.0.0",
+  "review_date": "2026-11-16",
+  "policy": "bounded_streaming_only",
+  "datasets": [
+    {
+      "key": "fineweb-edu",
+      "repo": "HuggingFaceFW/fineweb-edu",
+      "license": "ODC-By-1.0 + CommonCrawl Terms",
+      "status": "conditional",
+      "default_config": "sample-10BT",
+      "default_split": "train",
+      "max_sample_rows": 100,
+      "features": [
+        "text",
+        "id",
+        "dump",
+        "url",
+        "date",
+        "file_path",
+        "language",
+        "language_score",
+        "token_count",
+        "score",
+        "int_score"
+      ]
+    },
+    {
+      "key": "fineweb",
+      "repo": "HuggingFaceFW/fineweb",
+      "license": "ODC-By-1.0 + CommonCrawl Terms",
+      "status": "conditional",
+      "default_config": "CC-MAIN-2024-18",
+      "default_split": "train",
+      "max_sample_rows": 100,
+      "features": [
+        "text",
+        "id",
+        "dump",
+        "url",
+        "date",
+        "file_path",
+        "language",
+        "language_score",
+        "token_count"
+      ]
+    },
+    {
+      "key": "proof-pile-2",
+      "repo": "EleutherAI/proof-pile-2",
+      "license": "underlying component licences unchanged",
+      "status": "conditional",
+      "default_config": "open-web-math",
+      "default_split": "train",
+      "max_sample_rows": 50,
+      "features": [
+        "text",
+        "meta"
+      ]
+    },
+    {
+      "key": "numina-math-cot",
+      "repo": "AI-MO/NuminaMath-CoT",
+      "license": "Apache-2.0 declared; upstream sources need review",
+      "status": "conditional",
+      "default_config": null,
+      "default_split": "train",
+      "max_sample_rows": 200,
+      "features": [
+        "source",
+        "problem",
+        "solution",
+        "messages"
+      ]
+    },
+    {
+      "key": "oasst1",
+      "repo": "OpenAssistant/oasst1",
+      "license": "Apache-2.0",
+      "status": "conditional",
+      "default_config": null,
+      "default_split": "train",
+      "max_sample_rows": 500,
+      "features": [
+        "message_id",
+        "parent_id",
+        "user_id",
+        "created_date",
+        "text",
+        "role",
+        "lang",
+        "review_count",
+        "review_result",
+        "deleted",
+        "rank",
+        "synthetic",
+        "model_name",
+        "detoxify",
+        "message_tree_id",
+        "tree_state",
+        "emojis",
+        "labels"
+      ]
+    },
+    {
+      "key": "helpsteer2",
+      "repo": "nvidia/HelpSteer2",
+      "license": "CC-BY-4.0",
+      "status": "approved_with_attribution",
+      "default_config": null,
+      "default_split": "train",
+      "max_sample_rows": 500,
+      "features": [
+        "prompt",
+        "response",
+        "helpfulness",
+        "correctness",
+        "coherence",
+        "complexity",
+        "verbosity"
+      ]
+    },
+    {
+      "key": "indiccorp-v2",
+      "repo": "ai4bharat/IndicCorpV2",
+      "license": "CC-0 declared; verify third-party content rights",
+      "status": "conditional",
+      "default_config": "indiccorp_v2",
+      "default_split": "train",
+      "max_sample_rows": 500,
+      "features": [
+        "text"
+      ]
+    },
+    {
+      "key": "the-stack-v2",
+      "repo": "bigcode/the-stack-v2",
+      "license": "other; gated terms and per-repository licences",
+      "status": "hold",
+      "default_config": null,
+      "default_split": "train",
+      "max_sample_rows": 0,
+      "features": []
+    }
+  ]
+}
