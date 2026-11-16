@@ -392,3 +392,112 @@ def promote_reviewed_candidate(
     schema = json.loads((SCHEMA_ROOT / "sft.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(record)
     return record
+
+
+def inspect_repository(repository_path: Path) -> dict[str, Any]:
+    """Inspect repository structure and file types without running project code."""
+    root = repository_path.expanduser().resolve(strict=True)
+    if not root.is_dir():
+        raise NotADirectoryError(root)
+    language_counts: dict[str, int] = {}
+    files: list[dict[str, Any]] = []
+    skipped = 0
+    total_bytes = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            resolved = path.resolve(strict=True)
+            relative = resolved.relative_to(root).as_posix()
+        except (OSError, ValueError):
+            skipped += 1
+            continue
+        rel_path = Path(relative)
+        if excluded_reason(rel_path):
+            skipped += 1
+            continue
+        language = detect_language(rel_path)
+        if language is None:
+            continue
+        size = resolved.stat().st_size
+        language_counts[language] = language_counts.get(language, 0) + 1
+        total_bytes += size
+        files.append({"path": relative, "language": language, "bytes": size})
+    return {
+        "repository_path": str(root),
+        "revision": _git_revision(root),
+        "file_count": len(files),
+        "total_bytes": total_bytes,
+        "excluded_or_unsafe_count": skipped,
+        "languages": dict(sorted(language_counts.items())),
+        "files": files[:500],
+        "files_truncated": len(files) > 500,
+        "execution_performed": False,
+        "network_access_performed": False,
+    }
+
+
+def _record_fingerprint(record: dict[str, Any]) -> str:
+    provenance = record.get("provenance") or {}
+    fingerprint = provenance.get("content_sha256")
+    if fingerprint and re.fullmatch(r"[0-9a-f]{64}", str(fingerprint)):
+        return str(fingerprint)
+    body = record.get("text")
+    if body is None:
+        body = json.dumps(record.get("messages") or record, ensure_ascii=False, sort_keys=True)
+    return sha256_text(str(body))
+
+
+def deduplicate_jsonl(
+    input_paths: list[Path], output_path: Path, ledger_path: Path
+) -> dict[str, Any]:
+    """Exact-dedupe JSONL files; when duplicates cross splits, keep evaluation isolated."""
+    groups: dict[str, list[tuple[dict[str, Any], str, int]]] = {}
+    read_count = 0
+    for source_path in input_paths:
+        with source_path.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                fingerprint = _record_fingerprint(row)
+                split = row.get("dataset_split") or (row.get("source_metadata") or {}).get("dataset_split")
+                # An explicitly held-out evaluation record must not be copied into training.
+                priority = {"test": 0, "validation": 1, "train": 2}.get(split, 3)
+                groups.setdefault(fingerprint, []).append((row, str(source_path), line_number))
+                read_count += 1
+    canonical: list[dict[str, Any]] = []
+    ledger: list[dict[str, Any]] = []
+    for fingerprint, entries in groups.items():
+        # For identical content, prefer the most isolated split (test > validation > train).
+        selected = entries[0]
+        for candidate in entries[1:]:
+            old_split = selected[0].get("dataset_split") or (selected[0].get("source_metadata") or {}).get("dataset_split")
+            new_split = candidate[0].get("dataset_split") or (candidate[0].get("source_metadata") or {}).get("dataset_split")
+            order = {"test": 0, "validation": 1, "train": 2}
+            if order.get(new_split, 3) < order.get(old_split, 3):
+                selected = candidate
+        canonical.append(selected[0])
+        for row, source, line_number in entries:
+            if (row, source, line_number) == selected:
+                continue
+            ledger.append({
+                "content_sha256": fingerprint,
+                "canonical_record_id": selected[0].get("record_id") or selected[0].get("task_id"),
+                "duplicate_record_id": row.get("record_id") or row.get("task_id"),
+                "duplicate_source": source,
+                "duplicate_line": line_number,
+                "duplicate_split": row.get("dataset_split") or (row.get("source_metadata") or {}).get("dataset_split"),
+                "reason": "exact_duplicate_removed_to_prevent_split_leakage",
+            })
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_jsonl(output_path, canonical)
+    _write_jsonl(ledger_path, ledger)
+    return {
+        "input_records": read_count,
+        "unique_records": len(canonical),
+        "duplicates_removed": len(ledger),
+        "evaluation_priority": "test > validation > train",
+        "output": str(output_path),
+        "ledger": str(ledger_path),
+    }
