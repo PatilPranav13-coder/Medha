@@ -15,6 +15,7 @@ from backend.medha_data_factory.github import discover_repositories, download_se
 from backend.medha_data_factory.swegym_adapter import adapt_swegym_row
 from backend.medha_data_factory.scaling import build_progress_report, load_target_plan
 from backend.medha_data_factory.quality import score_sft_candidate
+from backend.medha_data_factory.shards import build_shards
 
 
 class MedhaDataFactoryTests(unittest.TestCase):
@@ -294,6 +295,7 @@ class MedhaDataFactoryTests(unittest.TestCase):
         self.assertEqual(report["remaining_examples"], 99_999_000)
         self.assertEqual(report["language_primary_quotas"]["python"]["target"], 20_000_000)
         self.assertEqual(report["full_stack"]["minimum_target"], 20_000_000)
+        self.assertEqual(report["full_stack"]["required_at_current_scale"], 200)
         self.assertEqual(report["status"], "in_progress")
         self.assertIn("Some counted examples have not passed the quality gate.", report["warnings"])
 
@@ -310,6 +312,37 @@ class MedhaDataFactoryTests(unittest.TestCase):
         score = score_sft_candidate(candidate, review, index)
         self.assertFalse(score["eligible"])
         self.assertIn("human_reviewed must be true", score["blockers"])
+
+
+
+    def test_streaming_shards_remove_duplicates_across_splits(self):
+        source_train = self.root / "input-train.jsonl"
+        source_test = self.root / "input-test.jsonl"
+        train_rows = [
+            {"record_id":"train-a","text":"same content","dataset_split":"train"},
+            {"record_id":"train-b","text":"two","dataset_split":"train"},
+            {"record_id":"train-c","text":"three","dataset_split":"train"}
+        ]
+        test_rows = [
+            {"record_id":"test-a","text":"same content","dataset_split":"test"},
+            {"record_id":"test-b","text":"four","dataset_split":"test"}
+        ]
+        source_train.write_text("".join(json.dumps(row)+"\\n" for row in train_rows),encoding="utf-8")
+        source_test.write_text("".join(json.dumps(row)+"\\n" for row in test_rows),encoding="utf-8")
+        output = self.root / "shards"
+        manifest = build_shards([source_train, source_test], output, examples_per_shard=1)
+        self.assertEqual(manifest["input_rows"], 5)
+        self.assertEqual(manifest["examples_written"], 4)
+        self.assertEqual(manifest["duplicate_rows_removed"], 1)
+        self.assertEqual(manifest["cross_split_duplicate_fingerprints"], 1)
+        self.assertEqual(manifest["split_counts"], {"train": 2, "validation": 0, "test": 2})
+        train_content = "".join(p.read_text(encoding="utf-8") for p in sorted(output.glob("train-*.jsonl")))
+        test_content = "".join(p.read_text(encoding="utf-8") for p in sorted(output.glob("test-*.jsonl")))
+        self.assertNotIn("train-a", train_content)
+        self.assertIn("test-a", test_content)
+        self.assertEqual(len(list(output.glob("train-*.jsonl"))), 2)
+        self.assertEqual(len(list(output.glob("test-*.jsonl"))), 2)
+        self.assertTrue((output / "manifest.json").exists())
 
 
 
