@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
             result = build_progress_report(plan, counts)
             if args.out:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
-                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         elif args.command == "score-example":
             candidate = json.loads(args.candidate.read_text(encoding="utf-8"))
             review = json.loads(args.review.read_text(encoding="utf-8"))
@@ -132,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
             result = score_sft_candidate(candidate, review, index)
             if args.out:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
-                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         elif args.command == "shard-jsonl":
             result = build_shards(args.input, args.out, examples_per_shard=args.examples_per_shard)
         elif args.command == "deduplicate":
