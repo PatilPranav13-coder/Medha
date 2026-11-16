@@ -163,6 +163,13 @@
         }
       },
       "additionalProperties": true
+    },
+    "dataset_split": {
+      "enum": [
+        "train",
+        "validation",
+        "test"
+      ]
     }
   },
   "additionalProperties": false
