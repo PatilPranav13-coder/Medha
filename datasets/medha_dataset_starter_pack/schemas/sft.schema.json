@@ -110,6 +110,21 @@
           "items": {
             "type": "string"
           }
+        },
+        "quality_score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "quality_tier": {
+          "enum": [
+            "gold",
+            "accepted",
+            "rejected"
+          ]
+        },
+        "training_eligible": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false

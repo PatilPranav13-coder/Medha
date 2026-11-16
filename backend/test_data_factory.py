@@ -13,6 +13,8 @@ from backend.medha_data_factory.core import (
 )
 from backend.medha_data_factory.github import discover_repositories, download_selected_repository
 from backend.medha_data_factory.swegym_adapter import adapt_swegym_row
+from backend.medha_data_factory.scaling import build_progress_report, load_target_plan
+from backend.medha_data_factory.quality import score_sft_candidate
 
 
 class MedhaDataFactoryTests(unittest.TestCase):
@@ -153,6 +155,8 @@ class MedhaDataFactoryTests(unittest.TestCase):
         }
         record = promote_reviewed_candidate(candidate, review, index)
         self.assertEqual(record["task_type"], "debugging")
+        self.assertGreaterEqual(record["quality_checks"]["quality_score"], 85)
+        self.assertTrue(record["quality_checks"]["training_eligible"])
         self.assertTrue(record["quality_checks"]["human_reviewed"])
         with self.assertRaises(PermissionError):
             promote_reviewed_candidate(candidate, dict(review, tests_passed=0), index)
@@ -261,6 +265,52 @@ class MedhaDataFactoryTests(unittest.TestCase):
     def test_limits_are_enforced(self):
         with self.assertRaises(ValueError):
             ingest_local_repository(self.repo,self.source,self.root/"bad",max_files=5001)
+
+
+    def test_100m_target_plan_and_progress_quotas(self):
+        root = Path(__file__).resolve().parents[1]
+        plan = load_target_plan(root / "datasets" / "medha_dataset_starter_pack" / "config" / "software_engineering_100m_plan.json")
+        self.assertEqual(plan["target_unique_examples"], 100_000_000)
+        self.assertEqual(sum(plan["language_primary_mix_percent"].values()), 100)
+        self.assertEqual(sum(plan["task_type_mix_percent"].values()), 100)
+        counts = {
+            "unique_examples": 1000,
+            "language_primary": {"python":200,"javascript":150,"typescript":150,"java":120,"cpp":120,"swift":80,"multi_language":180},
+            "task_types": {
+                "implementation_and_feature_delivery":180,"debugging_and_root_cause":160,
+                "testing_and_validation":120,"repository_comprehension":100,
+                "refactoring_and_maintainability":80,"backend_api_and_database":80,
+                "frontend_mobile_and_accessibility":80,"architecture_and_system_design":70,
+                "performance_security_and_reliability":70,"devops_delivery_and_observability":40,
+                "documentation_and_maintenance":20
+            },
+            "full_stack_examples":200,
+            "splits":{"train":900,"validation":50,"test":50},
+            "quality_passed_examples":950,
+            "licence_approved_examples":1000
+        }
+        report = build_progress_report(plan, counts)
+        self.assertEqual(report["unique_examples"], 1000)
+        self.assertEqual(report["remaining_examples"], 99_999_000)
+        self.assertEqual(report["language_primary_quotas"]["python"]["target"], 20_000_000)
+        self.assertEqual(report["full_stack"]["minimum_target"], 20_000_000)
+        self.assertEqual(report["status"], "in_progress")
+        self.assertIn("Some counted examples have not passed the quality gate.", report["warnings"])
+
+    def test_quality_scorer_rejects_unreviewed_candidate(self):
+        candidate = {"candidate_id":"candidate-1","prompt":"Implement a safe parser and explain its edge cases."}
+        review = {
+            "assistant_answer":"A reviewed reference implementation with validation and useful error handling.",
+            "human_reviewed":False,"factuality_pass":True,"safety_reviewed":True,
+            "requires_execution":True,"build_passed":True,"tests_passed":2,
+            "verification_report":{"status":"passed","exit_code":0,"network_enabled":False,
+                "source_mount_read_only":True,"repository_code_executed":True}
+        }
+        index = dict(self.source, revision="a"*40)
+        score = score_sft_candidate(candidate, review, index)
+        self.assertFalse(score["eligible"])
+        self.assertIn("human_reviewed must be true", score["blockers"])
+
 
 
 if __name__ == "__main__":

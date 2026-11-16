@@ -1,0 +1,251 @@
+{
+  "curriculum_version": "1.0.0",
+  "objective": "Teach Medha to operate as a disciplined software engineer across individual files, multi-module repositories, full-stack products, and production systems.",
+  "engineering_loop": [
+    "Understand the user requirement, constraints, and acceptance criteria.",
+    "Inspect the repository, identify entry points, dependencies, data flow, and existing conventions.",
+    "Propose a small implementation plan and call out assumptions or risks.",
+    "Make the smallest coherent change that solves the requirement.",
+    "Add or update tests that demonstrate the behaviour and guard against regressions.",
+    "Run the relevant tests, type checks, lint, build, and security checks in an isolated environment.",
+    "Diagnose failures from actual output, revise the implementation, and rerun checks.",
+    "Summarise changed files, design decisions, verification results, and remaining limitations."
+  ],
+  "levels": [
+    {
+      "level": 1,
+      "name": "Programming foundations",
+      "mastery_goal": "Write correct, readable, idiomatic code and explain execution.",
+      "topics": [
+        "types and data structures",
+        "control flow and functions",
+        "modules and packages",
+        "exceptions and error handling",
+        "input/output",
+        "standard libraries",
+        "basic algorithms and complexity"
+      ],
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "cpp",
+        "swift"
+      ],
+      "tasks": [
+        "predict program output",
+        "implement a small function",
+        "trace state changes",
+        "fix syntax and logic errors",
+        "explain time and space complexity"
+      ],
+      "exit_evidence": [
+        "unit tests pass",
+        "edge cases are handled",
+        "solution is explained accurately"
+      ]
+    },
+    {
+      "level": 2,
+      "name": "Code quality and testing",
+      "mastery_goal": "Build maintainable code and prove behaviour rather than merely asserting it.",
+      "topics": [
+        "unit and integration testing",
+        "test-driven development",
+        "mocks and fixtures",
+        "type systems",
+        "linting and formatting",
+        "code review",
+        "readability and documentation"
+      ],
+      "tasks": [
+        "write tests before a fix",
+        "find missing edge cases",
+        "refactor without behaviour changes",
+        "review a pull request",
+        "diagnose flaky tests"
+      ],
+      "exit_evidence": [
+        "meaningful regression test",
+        "existing behaviour preserved",
+        "test claims backed by execution logs"
+      ]
+    },
+    {
+      "level": 3,
+      "name": "Repository engineering",
+      "mastery_goal": "Understand and safely modify an unfamiliar codebase.",
+      "topics": [
+        "repository navigation",
+        "architecture and module boundaries",
+        "dependency analysis",
+        "Git history and diffs",
+        "issue triage",
+        "configuration and build systems"
+      ],
+      "tasks": [
+        "map a repository",
+        "trace a request through frontend and backend",
+        "implement an issue from a pinned commit",
+        "identify root cause",
+        "make a minimal patch"
+      ],
+      "exit_evidence": [
+        "correct change location",
+        "small reviewable diff",
+        "regression and existing tests pass"
+      ]
+    },
+    {
+      "level": 4,
+      "name": "Application and full-stack engineering",
+      "mastery_goal": "Deliver complete features across client, server, data, and interfaces.",
+      "topics": [
+        "HTML/CSS/JavaScript",
+        "React and TypeScript",
+        "API design",
+        "authentication and authorisation",
+        "SQL and data modelling",
+        "caching",
+        "validation",
+        "accessibility",
+        "responsive design"
+      ],
+      "tasks": [
+        "build a feature end to end",
+        "connect UI to an API",
+        "design a database migration",
+        "secure an endpoint",
+        "debug browser/server integration"
+      ],
+      "exit_evidence": [
+        "frontend and backend work together",
+        "API and schema contracts are tested",
+        "accessibility and error states are covered"
+      ]
+    },
+    {
+      "level": 5,
+      "name": "Mobile and native engineering",
+      "mastery_goal": "Build and maintain native and cross-platform mobile applications.",
+      "topics": [
+        "Swift and SwiftUI",
+        "UIKit",
+        "Android architecture",
+        "React Native",
+        "Flutter",
+        "offline state",
+        "device lifecycle",
+        "accessibility",
+        "performance"
+      ],
+      "tasks": [
+        "implement a native screen",
+        "fix lifecycle bugs",
+        "design local persistence",
+        "test responsive layouts and state restoration"
+      ],
+      "exit_evidence": [
+        "device-appropriate behaviour",
+        "lifecycle and failure cases covered",
+        "tests or reproducible device checks"
+      ]
+    },
+    {
+      "level": 6,
+      "name": "Systems, security, and performance",
+      "mastery_goal": "Reason about systems under load and defend them against failure and abuse.",
+      "topics": [
+        "concurrency and parallelism",
+        "memory and CPU profiling",
+        "networking",
+        "distributed systems",
+        "data consistency",
+        "secure coding",
+        "threat modelling",
+        "reliability and fault tolerance"
+      ],
+      "tasks": [
+        "profile a bottleneck",
+        "remove a race condition",
+        "review an authentication flow",
+        "design retries and idempotency",
+        "analyse a production incident"
+      ],
+      "exit_evidence": [
+        "measured before/after results",
+        "security tests or threat model",
+        "failure modes and trade-offs documented"
+      ]
+    },
+    {
+      "level": 7,
+      "name": "Delivery and operations",
+      "mastery_goal": "Ship, observe, and safely operate software.",
+      "topics": [
+        "GitHub Actions and CI",
+        "containers",
+        "deployment",
+        "infrastructure configuration",
+        "logs and metrics",
+        "tracing",
+        "rollbacks",
+        "release management"
+      ],
+      "tasks": [
+        "repair a CI pipeline",
+        "write a reproducible container build",
+        "add health checks and telemetry",
+        "design a rollback plan"
+      ],
+      "exit_evidence": [
+        "repeatable build",
+        "automated checks",
+        "observable health and safe recovery path"
+      ]
+    },
+    {
+      "level": 8,
+      "name": "Architecture and technical leadership",
+      "mastery_goal": "Make and communicate sound engineering decisions for complex products.",
+      "topics": [
+        "requirements decomposition",
+        "architecture decision records",
+        "service boundaries",
+        "scalability",
+        "migration planning",
+        "cost and reliability trade-offs",
+        "technical debt"
+      ],
+      "tasks": [
+        "design a multi-service system",
+        "compare architectural options",
+        "plan a zero-downtime migration",
+        "review a design for risks"
+      ],
+      "exit_evidence": [
+        "clear requirements and constraints",
+        "defensible trade-offs",
+        "migration and operational plan"
+      ]
+    }
+  ],
+  "task_record_requirements": [
+    "prompt and acceptance criteria",
+    "repository or code context at a pinned revision when applicable",
+    "language, framework, task type, and difficulty labels",
+    "reference solution or accepted response",
+    "tests or explicit non-executable review rationale",
+    "actual verification results when execution is required",
+    "licence, source URL, revision, hashes, and transformation provenance",
+    "human review and quality score"
+  ],
+  "anti_shortcut_rules": [
+    "Do not reward code that only looks plausible; require tests or explicit review evidence.",
+    "Do not claim a command ran unless the execution record says it ran.",
+    "Do not train directly on benchmark answers or hidden tests.",
+    "Do not let generated answers become ground truth without independent verification.",
+    "Prefer repository-level tasks that require understanding interactions over isolated snippet imitation."
+  ]
+}

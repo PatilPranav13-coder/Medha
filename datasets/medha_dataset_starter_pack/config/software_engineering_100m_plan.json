@@ -1,0 +1,70 @@
+{
+  "plan_version": "1.0.0",
+  "project": "Medha Software Engineering",
+  "target_unique_examples": 100000000,
+  "definition_of_one_example": "One unique, provenance-traceable engineering learning unit: a task or code-understanding objective, sufficient context, a response or solution, and applicable verification evidence. A raw file is not automatically one high-quality supervised example.",
+  "language_primary_mix_percent": {
+    "python": 20,
+    "javascript": 15,
+    "typescript": 15,
+    "java": 12,
+    "cpp": 12,
+    "swift": 8,
+    "multi_language": 18
+  },
+  "task_type_mix_percent": {
+    "implementation_and_feature_delivery": 18,
+    "debugging_and_root_cause": 16,
+    "testing_and_validation": 12,
+    "repository_comprehension": 10,
+    "refactoring_and_maintainability": 8,
+    "backend_api_and_database": 8,
+    "frontend_mobile_and_accessibility": 8,
+    "architecture_and_system_design": 7,
+    "performance_security_and_reliability": 7,
+    "devops_delivery_and_observability": 4,
+    "documentation_and_maintenance": 2
+  },
+  "full_stack_min_examples": 20000000,
+  "split_percent": {
+    "train": 90,
+    "validation": 5,
+    "test": 5
+  },
+  "quality_min_score": 85,
+  "synthetic_max_fraction": 0.15,
+  "target_shard_examples": 100000,
+  "milestones": [
+    {
+      "name": "proof_of_pipeline",
+      "cumulative_examples": 10000
+    },
+    {
+      "name": "repeatable_collection",
+      "cumulative_examples": 100000
+    },
+    {
+      "name": "multi_source_scale",
+      "cumulative_examples": 1000000
+    },
+    {
+      "name": "distributed_collection",
+      "cumulative_examples": 10000000
+    },
+    {
+      "name": "full_target",
+      "cumulative_examples": 100000000
+    }
+  ],
+  "hard_rules": [
+    "Only sources with explicit, documented training rights may enter ingestion.",
+    "Dataset-wrapper licences do not automatically clear underlying repositories, files, problems, or dependencies.",
+    "Keep repository, issue, and problem families grouped across train, validation, and test.",
+    "Never train on sealed evaluation prompts, answers, patches, or hidden tests.",
+    "Every executable solution needs isolated build/test evidence; a claimed test pass is not evidence.",
+    "Synthetic examples must be labelled, traceable to their generation process, reviewed, and verified.",
+    "Do not count exact or near duplicates as new unique examples.",
+    "Do not promote examples below the quality threshold."
+  ],
+  "counting_note": "Language-primary and task-type buckets are mutually exclusive within their own dimension and each should total the unique-example count. Full-stack coverage is a cross-cutting tag and overlaps those dimensions."
+}

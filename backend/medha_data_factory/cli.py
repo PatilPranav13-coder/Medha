@@ -12,6 +12,8 @@ from .core import (
 )
 from .github import discover_repositories, download_selected_repository
 from .sandbox import verify_in_docker
+from .quality import score_sft_candidate
+from .scaling import build_progress_report, load_target_plan
 
 
 def _write_jsonl(path: Path, record: dict) -> None:
@@ -82,6 +84,17 @@ def build_parser() -> argparse.ArgumentParser:
     evaluation.add_argument("--source-id", required=True)
     evaluation.add_argument("--out", required=True, type=Path)
 
+    progress = commands.add_parser("progress", help="Report progress against the 100M engineering-example quotas.")
+    progress.add_argument("--plan", required=True, type=Path)
+    progress.add_argument("--counts", required=True, type=Path)
+    progress.add_argument("--out", type=Path)
+
+    score = commands.add_parser("score-example", help="Score one proposed SFT example against the quality gate.")
+    score.add_argument("--candidate", required=True, type=Path)
+    score.add_argument("--review", required=True, type=Path)
+    score.add_argument("--repository-index", required=True, type=Path)
+    score.add_argument("--out", type=Path)
+
     dedupe = commands.add_parser("deduplicate", help="Exact-dedupe JSONL records and preserve duplicate provenance.")
     dedupe.add_argument("--input", required=True, nargs="+", type=Path)
     dedupe.add_argument("--out", required=True, type=Path)
@@ -99,6 +112,21 @@ def main(argv: list[str] | None = None) -> int:
             if args.out:
                 args.out.parent.mkdir(parents=True, exist_ok=True)
                 args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        elif args.command == "progress":
+            plan = load_target_plan(args.plan)
+            counts = json.loads(args.counts.read_text(encoding="utf-8"))
+            result = build_progress_report(plan, counts)
+            if args.out:
+                args.out.parent.mkdir(parents=True, exist_ok=True)
+                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+        elif args.command == "score-example":
+            candidate = json.loads(args.candidate.read_text(encoding="utf-8"))
+            review = json.loads(args.review.read_text(encoding="utf-8"))
+            index = json.loads(args.repository_index.read_text(encoding="utf-8"))
+            result = score_sft_candidate(candidate, review, index)
+            if args.out:
+                args.out.parent.mkdir(parents=True, exist_ok=True)
+                args.out.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
         elif args.command == "deduplicate":
             result = deduplicate_jsonl(args.input, args.out, args.ledger)
         elif args.command == "verify":

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
+from .quality import score_sft_candidate
 
 SCHEMA_ROOT = Path(__file__).resolve().parents[2] / "datasets" / "medha_dataset_starter_pack" / "schemas"
 PIPELINE_VERSION = "medha-software-factory/0.3.0"
@@ -467,6 +468,18 @@ def promote_reviewed_candidate(
             "attribution_text": repository_index.get("attribution_text"),
         },
     }
+    quality = score_sft_candidate(candidate, review, repository_index)
+    if not quality["eligible"]:
+        raise ValueError(
+            f"Candidate quality gate failed ({quality['score']}/100): "
+            + "; ".join(quality["blockers"])
+        )
+    record["quality_checks"].update({
+        "quality_score": quality["score"],
+        "quality_tier": quality["tier"],
+        "training_eligible": True,
+        "notes": record["quality_checks"]["notes"] + quality["notes"],
+    })
     schema = json.loads((SCHEMA_ROOT / "sft.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(record)
     return record
