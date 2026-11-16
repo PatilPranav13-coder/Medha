@@ -14,6 +14,23 @@ The factory prepares data for Medha's software-engineering capabilities. It is a
 
 ## Install and run from the repository root
 
+
+### One-command local setup
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_windows.ps1
+```
+
+macOS/Linux:
+
+```bash
+bash scripts/setup_macos.sh
+```
+
+Both scripts require Python 3.11, create or reuse the .venv environment, install backend/requirements.txt, run backend/data-factory tests, and check the CLI. They do not fetch training corpora or train model weights.
+
 ```bash
 python -m pip install -r backend/requirements.txt
 
