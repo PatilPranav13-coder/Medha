@@ -504,3 +504,131 @@ def deduplicate_jsonl(
         "output": str(output_path),
         "ledger": str(ledger_path),
     }
+
+
+def make_preference_record(
+    *,
+    record_id: str,
+    prompt: str,
+    response_1: str,
+    response_2: str,
+    preference_strength: int,
+    preference_reason: str,
+    source: dict[str, Any],
+    domain_tags: list[str] | None = None,
+    task_type: str = "code_generation",
+) -> dict[str, Any]:
+    """Build a preference pair only from an explicit non-tied human comparison."""
+    validate_source_policy(source)
+    if not isinstance(preference_strength, int) or isinstance(preference_strength, bool) or not -3 <= preference_strength <= 3:
+        raise ValueError("preference_strength must be an integer from -3 to +3.")
+    if preference_strength == 0:
+        raise ValueError("A tied comparison cannot become a chosen/rejected preference pair.")
+    prompt = prompt.strip()
+    response_1 = response_1.strip()
+    response_2 = response_2.strip()
+    if not prompt or not response_1 or not response_2 or response_1 == response_2:
+        raise ValueError("Prompt and two distinct non-empty responses are required.")
+    chosen, rejected = (response_2, response_1) if preference_strength > 0 else (response_1, response_2)
+    digest = sha256_text(prompt + "\n" + chosen + "\n" + rejected)
+    source_split = source.get("source_split", "train")
+    if source_split not in {"train", "validation", "test", "unknown"}:
+        source_split = "unknown"
+    record = {
+        "schema_version": "1.0.0",
+        "record_id": record_id or f"preference:{digest[:16]}",
+        "prompt_messages": [{"role": "user", "content": prompt}],
+        "chosen": chosen,
+        "rejected": rejected,
+        "preference_reason": preference_reason.strip(),
+        "task_type": task_type,
+        "domain_tags": domain_tags or ["software_engineering"],
+        "source_metadata": {"reviewer": source.get("reviewer"), "reviewed_at": source.get("reviewed_at")},
+        "source_preference_strength": preference_strength,
+        "source_split": source_split,
+        "provenance": {
+            "source_dataset": source["source_id"],
+            "source_revision": source.get("revision"),
+            "source_config": source.get("source_config"),
+            "source_split": source_split,
+            "source_record_id": record_id,
+            "source_url": source.get("repository_url"),
+            "source_file": None,
+            "source_date": source.get("reviewed_at"),
+            "declared_license": source["declared_license"],
+            "underlying_license": source["underlying_license"],
+            "usage_status": source["usage_status"],
+            "content_sha256": digest,
+            "duplicate_cluster_id": None,
+            "transformation_version": "1.0.0",
+            "pipeline_version": PIPELINE_VERSION,
+            "acquired_at": datetime.now(timezone.utc).isoformat(),
+            "selection_seed": None,
+            "source_metadata": {"license_evidence_url": source["license_evidence_url"]},
+            "attribution_text": source.get("attribution_text"),
+        },
+    }
+    schema = json.loads((SCHEMA_ROOT / "preference.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(record)
+    return record
+
+
+def make_evaluation_record(
+    *,
+    task_id: str,
+    category: str,
+    prompt: str,
+    reference_answer: str,
+    rubric: list[dict[str, Any]],
+    source: dict[str, Any],
+    difficulty: str = "intermediate",
+    expected_artifacts: list[str] | None = None,
+    hidden_tests: list[str] | None = None,
+    group_id: str | None = None,
+) -> dict[str, Any]:
+    """Create a sealed test-only evaluation record; never emits it to train JSONL."""
+    validate_source_policy(source)
+    if not prompt.strip() or not reference_answer.strip():
+        raise ValueError("Evaluation prompt and reference answer are required.")
+    if not rubric or sum(float(item.get("weight", 0)) for item in rubric) <= 0:
+        raise ValueError("Evaluation rubric needs positive total weight.")
+    if source.get("dataset_split") not in (None, "test"):
+        raise PermissionError("Evaluation records must come from a test-only source group.")
+    digest = sha256_text(prompt + "\n" + reference_answer)
+    record = {
+        "schema_version": "1.0.0",
+        "task_id": task_id,
+        "category": category,
+        "prompt_messages": [{"role": "user", "content": prompt.strip()}],
+        "reference_answer": reference_answer.strip(),
+        "rubric": rubric,
+        "expected_artifacts": expected_artifacts or [],
+        "hidden_tests": hidden_tests or [],
+        "difficulty": difficulty,
+        "split": "test",
+        "source_metadata": {"group_id": group_id, "sealed": True},
+        "provenance": {
+            "source_dataset": source["source_id"],
+            "source_revision": source.get("revision"),
+            "source_config": source.get("source_config"),
+            "source_split": "test",
+            "source_record_id": task_id,
+            "source_url": source.get("repository_url"),
+            "source_file": None,
+            "source_date": source.get("reviewed_at"),
+            "declared_license": source["declared_license"],
+            "underlying_license": source["underlying_license"],
+            "usage_status": source["usage_status"],
+            "content_sha256": digest,
+            "duplicate_cluster_id": group_id,
+            "transformation_version": "1.0.0",
+            "pipeline_version": PIPELINE_VERSION,
+            "acquired_at": datetime.now(timezone.utc).isoformat(),
+            "selection_seed": None,
+            "source_metadata": {"license_evidence_url": source["license_evidence_url"]},
+            "attribution_text": source.get("attribution_text"),
+        },
+    }
+    schema = json.loads((SCHEMA_ROOT / "evaluation.schema.json").read_text(encoding="utf-8"))
+    Draft202012Validator(schema).validate(record)
+    return record
