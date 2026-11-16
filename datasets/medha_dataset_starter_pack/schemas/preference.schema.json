@@ -8,7 +8,6 @@
     "prompt_messages",
     "chosen",
     "rejected",
-    "scores",
     "preference_reason",
     "provenance"
   ],
@@ -264,6 +263,32 @@
         }
       },
       "additionalProperties": true
+    },
+    "source_preference_strength": {
+      "type": "integer",
+      "minimum": -3,
+      "maximum": 3,
+      "description": "HelpSteer2 dedicated pairwise annotation: negative prefers response_1; positive prefers response_2; zero denotes a tie and should not create a DPO pair."
+    },
+    "preference_statement": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "preference_elaboration": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_split": {
+      "enum": [
+        "train",
+        "validation",
+        "test",
+        "unknown"
+      ]
     }
   },
   "additionalProperties": false
