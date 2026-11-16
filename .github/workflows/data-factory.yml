@@ -1,0 +1,37 @@
+name: Medha software data factory
+
+on:
+  push:
+    paths:
+      - "backend/medha_data_factory/**"
+      - "backend/test_data_factory.py"
+      - "backend/test_main.py"
+      - "backend/requirements.txt"
+      - "datasets/medha_dataset_starter_pack/schemas/**"
+      - ".github/workflows/data-factory.yml"
+  pull_request:
+    paths:
+      - "backend/medha_data_factory/**"
+      - "backend/test_data_factory.py"
+      - "backend/test_main.py"
+      - "backend/requirements.txt"
+      - "datasets/medha_dataset_starter_pack/schemas/**"
+      - ".github/workflows/data-factory.yml"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run backend and data-factory tests
+        run: python -m unittest backend.test_main backend.test_data_factory -v
+      - name: Check the CLI
+        run: python -m backend.medha_data_factory --help
