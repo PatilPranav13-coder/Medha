@@ -1,0 +1,84 @@
+{
+  "manifest_version": "1.0.0",
+  "review_policy": "All entries are held. Review the dataset wrapper, data records, source repository/file licences and terms separately before changing usage_status.",
+  "sources": [
+    {
+      "source_id": "SWE-Gym/SWE-Gym",
+      "repository_url": "https://huggingface.co/datasets/SWE-Gym/SWE-Gym",
+      "revision": null,
+      "declared_license": "MIT",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://huggingface.co/datasets/SWE-Gym/SWE-Gym",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "repository-reviewed",
+      "review_notes": "Dataset wrapper licence does not grant rights in the underlying GitHub repositories referenced by tasks. Clear each repo separately and replay task patches at pinned base commits."
+    },
+    {
+      "source_id": "github/CodeSearchNet",
+      "repository_url": "https://github.com/github/CodeSearchNet",
+      "revision": null,
+      "declared_license": "MIT",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://github.com/github/CodeSearchNet",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "repository-reviewed",
+      "review_notes": "Tooling repository licence does not blanket-license code search corpora; inspect the per-language licence metadata and underlying repository rights."
+    },
+    {
+      "source_id": "IBM/Project_CodeNet",
+      "repository_url": "https://github.com/IBM/Project_CodeNet",
+      "revision": null,
+      "declared_license": "Apache-2.0",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://github.com/IBM/Project_CodeNet/blob/main/LICENSE",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "repository-reviewed",
+      "review_notes": "Tooling licence does not determine rights in online-judge submissions and problem statements. Review upstream terms and each data component."
+    },
+    {
+      "source_id": "mdn/content",
+      "repository_url": "https://github.com/mdn/content",
+      "revision": null,
+      "declared_license": "CC-BY-SA-2.5",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://github.com/mdn/content/blob/main/LICENSE.md",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "file-reviewed",
+      "review_notes": "Separate prose and code examples; check current file-level metadata and licence treatment before ingesting either."
+    },
+    {
+      "source_id": "LiveCodeBench/LiveCodeBench",
+      "repository_url": "https://github.com/LiveCodeBench/LiveCodeBench",
+      "revision": null,
+      "declared_license": "MIT",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://github.com/LiveCodeBench/LiveCodeBench",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "repository-reviewed",
+      "review_notes": "Use evaluation-first. Review problem/solution copyrights and benchmark redistribution/training terms; avoid contamination from public tasks."
+    },
+    {
+      "source_id": "bigcode/the-stack-v2",
+      "repository_url": "https://huggingface.co/datasets/bigcode/the-stack-v2",
+      "revision": null,
+      "declared_license": "other",
+      "underlying_license": "unknown",
+      "usage_status": "hold",
+      "license_evidence_url": "https://huggingface.co/datasets/bigcode/the-stack-v2",
+      "reviewed_at": "2026-11-16",
+      "reviewer": "pending-human-review",
+      "license_scope": "file-reviewed",
+      "review_notes": "Do not harvest before gated access agreement, SWH/INRIA terms, original repository licences and removal/update procedures are handled."
+    }
+  ]
+}
