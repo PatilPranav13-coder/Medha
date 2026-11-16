@@ -1,0 +1,19 @@
+{
+  "manifest_version": "1.0.0",
+  "sources": [
+    {
+      "source_id": "owner/repository",
+      "repository_url": "https://github.com/owner/repository",
+      "revision": null,
+      "declared_license": "Apache-2.0",
+      "underlying_license": "Apache-2.0",
+      "usage_status": "hold",
+      "license_evidence_url": "https://github.com/owner/repository/blob/main/LICENSE",
+      "reviewed_at": "not-reviewed",
+      "reviewer": "not-reviewed",
+      "license_scope": "repository-reviewed",
+      "attribution_text": "Replace with the required attribution.",
+      "review_notes": "Template only. Confirm the licence and all relevant code/data rights. Set usage_status to approved only after documented human review."
+    }
+  ]
+}
