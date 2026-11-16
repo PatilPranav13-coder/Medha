@@ -61,8 +61,8 @@
     {
       "key": "numina-math-cot",
       "repo": "AI-MO/NuminaMath-CoT",
-      "license": "Apache-2.0 declared; upstream sources need review",
-      "status": "conditional",
+      "license": "CONFLICT: README metadata/body show CC-BY-NC-4.0; page header says Apache-2.0; separate project-numina repo page says Apache-2.0",
+      "status": "hold",
       "default_config": null,
       "default_split": "train",
       "max_sample_rows": 200,
@@ -71,7 +71,8 @@
         "problem",
         "solution",
         "messages"
-      ]
+      ],
+      "notes": "Do not use for commercial training until maintainers clarify governing licence for exact AI-MO repository/revision."
     },
     {
       "key": "oasst1",
