@@ -5,8 +5,9 @@
 - **Provider family:** local OpenAI-compatible chat server, intended for Ollama.
 - **Model, licence, source URL, quantisation:** **PENDING OWNER RUN**. The owner will select the exact model and quantisation after running `python -m evals.capability --brain openai_compat --model <tag> --out reports/<model>/` and reviewing licence terms on the model's source page.
 - **Weights:** supplied and installed by the operator; the application does not download model weights.
-- **Intended use:** research and coding assistance for students and engineers, with citations once WP5 web search is installed.
-- **Known limits:** no production-model quality or ChatGPT Nov 2022 parity result has been measured yet. Until web search ships, answers have no web citations. Local models may be slow or unavailable on undersized hardware.
+- **Intended use:** research and coding assistance for students and engineers, with rule-routed web search and numbered source links when available.
+- **Measured results:** **PENDING OWNER RUN**. Run the capability suite and serving benchmark on the selected production brain and target hardware; this repository run uses deterministic fixtures only.
+- **Known limits:** no production-model quality or ChatGPT Nov 2022 parity result has been measured. Live provider behavior has not been verified from this build environment. Search can fail, miss sources, or return incomplete pages; the extractive path may be less fluent. Local models may be slow or unavailable on undersized hardware.
 
 ## Experimental from-scratch model
 

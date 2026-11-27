@@ -1,0 +1,8 @@
+{
+  "knowledge_reasoning": 0.60,
+  "coding": 0.40,
+  "instruction_following": 0.70,
+  "multi_turn": 0.80,
+  "summarise_rewrite_translate": 0.50,
+  "safety_refusal": 0.95
+}
