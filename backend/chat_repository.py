@@ -40,6 +40,11 @@ class ChatRepository:
         except (TypeError, json.JSONDecodeError):
             sources = []
         message["sources"] = sources if isinstance(sources, list) else []
+        try:
+            memories = json.loads(message.pop("memory_used_json", "[]"))
+        except (TypeError, json.JSONDecodeError):
+            memories = []
+        message["memory_used"] = memories if isinstance(memories, list) else []
         return message
 
     def get_conversation(self, user_id: str, conversation_id: str) -> dict[str, Any] | None:
@@ -51,7 +56,7 @@ class ChatRepository:
             if row is None:
                 return None
             messages = connection.execute(
-                "SELECT id, role, content, created_at, sources_json FROM messages "
+                "SELECT id, role, content, created_at, sources_json, memory_used_json FROM messages "
                 "WHERE conversation_id=? ORDER BY created_at, rowid", (conversation_id,),
             ).fetchall()
         result = dict(row)
@@ -69,6 +74,7 @@ class ChatRepository:
     def append_message(
         self, user_id: str, conversation_id: str, role: str, content: str,
         sources: list[dict[str, object]] | None = None,
+        memory_used: list[dict[str, Any]] | None = None,
     ) -> str:
         if role not in {"user", "assistant"}:
             raise ValueError("Only user and assistant messages can be stored.")
@@ -80,10 +86,11 @@ class ChatRepository:
             if owner is None:
                 raise KeyError("Conversation does not exist.")
             connection.execute(
-                "INSERT INTO messages(id, conversation_id, user_id, role, content, created_at, sources_json) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO messages(id, conversation_id, user_id, role, content, created_at, sources_json, memory_used_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (identifier, conversation_id, user_id, role, content, now,
-                 json.dumps(sources or [], ensure_ascii=False, separators=(",", ":"))),
+                 json.dumps(sources or [], ensure_ascii=False, separators=(",", ":")),
+                 json.dumps(memory_used or [], ensure_ascii=False, separators=(",", ":"))),
             )
             connection.execute(
                 "UPDATE conversations SET updated_at=? WHERE id=? AND user_id=?",
@@ -187,7 +194,7 @@ class ChatRepository:
             for conversation in conversations:
                 row = dict(conversation)
                 row["messages"] = [self._message(message) for message in connection.execute(
-                    "SELECT id, role, content, created_at, sources_json FROM messages WHERE conversation_id=? ORDER BY created_at, rowid",
+                    "SELECT id, role, content, created_at, sources_json, memory_used_json FROM messages WHERE conversation_id=? ORDER BY created_at, rowid",
                     (row["id"],),
                 ).fetchall()]
                 result["conversations"].append(row)

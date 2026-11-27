@@ -35,3 +35,7 @@ CI runs Ruff's correctness-focused rules over the launch app, search, safety, mo
 ## 2026-11-27 — Version consent and minimize operational events
 
 Signup requires the current plain-language notice version and stores it in the same SQLite transaction as account creation. Operational events contain metadata only and default to 30-day retention. Legal files are drafts; commencement dates and notification duties remain owner/legal verification items.
+
+## 2026-11-27 — Keep memory explicit and uploaded files bounded
+
+Only a direct “remember that …” request or the memory manager creates a long-term memory; normal chat is not mined for personal facts. Memory and file chunks use the shared local BM25 ranker. Uploaded files are stored under `MEDHA_UPLOAD_DIR` outside the static web root, with a 5 MiB per-file limit, 25 MiB per-user quota, 200-page PDF cap, and no OCR. Extracted file text is always wrapped as untrusted data, and extractive answers cite the matching file chunk.

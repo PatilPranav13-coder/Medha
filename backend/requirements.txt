@@ -2,3 +2,5 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 jsonschema>=4.20
 sentry-sdk==2.77.0
+python-multipart==0.0.34
+pypdf==7.2.0

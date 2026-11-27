@@ -66,6 +66,9 @@ class Settings:
     consent_notice_version: str = NOTICE_VERSION
     grievance_email: str | None = None
     sentry_dsn: str | None = None
+    upload_storage_dir: str = "instance/uploads"
+    max_upload_bytes: int = 5 * 1024 * 1024
+    user_upload_quota_bytes: int = 25 * 1024 * 1024
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -105,6 +108,9 @@ class Settings:
             consent_notice_version=os.getenv("MEDHA_CONSENT_NOTICE_VERSION", NOTICE_VERSION).strip(),
             grievance_email=os.getenv("GRIEVANCE_EMAIL", "").strip() or None,
             sentry_dsn=os.getenv("SENTRY_DSN", "").strip() or None,
+            upload_storage_dir=os.getenv("MEDHA_UPLOAD_DIR", "instance/uploads").strip(),
+            max_upload_bytes=_integer("MEDHA_MAX_UPLOAD_BYTES", 5 * 1024 * 1024),
+            user_upload_quota_bytes=_integer("MEDHA_USER_UPLOAD_QUOTA_BYTES", 25 * 1024 * 1024),
         )
 
     def validate(self) -> None:
@@ -136,3 +142,7 @@ class Settings:
             raise ValueError("SENTRY_DSN must be an https URL when configured.")
         if not self.database_path.strip():
             raise ValueError("MEDHA_DATABASE_PATH cannot be empty.")
+        if not self.upload_storage_dir.strip():
+            raise ValueError("MEDHA_UPLOAD_DIR cannot be empty.")
+        if self.max_upload_bytes < 1 or self.user_upload_quota_bytes < self.max_upload_bytes:
+            raise ValueError("Upload limits must be positive and the quota must cover one maximum-sized file.")

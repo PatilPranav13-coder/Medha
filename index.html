@@ -18,6 +18,8 @@
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
     .search-mode{max-width:112px;min-height:38px;border:1px solid var(--border2);border-radius:9px;background:var(--bg3);color:var(--text);padding:0 7px;font-size:11px}
     .source-snippet{color:var(--muted);font-size:11px;line-height:1.45;margin:2px 0 8px 9px}
+    .memory-used{margin-top:11px;padding:8px 10px;border-left:2px solid var(--accent);border-radius:0 8px 8px 0;background:var(--bg2);color:var(--muted);font-size:11px}.memory-used-item{margin-top:4px;color:var(--text);font-size:12px}
+    #memory-dialog{width:min(620px,calc(100% - 24px));max-height:min(88vh,820px);overflow:auto}.data-manager{padding:22px}.data-manager-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.data-manager-head h2{font:24px Georgia,serif;margin:0 0 5px}.data-manager-head p,.manager-note{color:var(--muted);font-size:12px;line-height:1.5}.data-manager .section-label{padding:0;margin:18px 0 8px}.memory-form{margin:15px 0}.memory-form>label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.memory-entry{display:flex;gap:8px}.memory-entry input{min-width:0;flex:1;border:1px solid var(--border2);border-radius:9px;background:var(--bg);color:var(--text);padding:10px}.memory-entry .primary-btn{width:auto}.data-list{display:grid;gap:7px}.data-row{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid var(--border);border-radius:9px;background:var(--bg)}.data-row>span,.data-row>label{min-width:0;flex:1;overflow-wrap:anywhere;color:var(--text);font-size:12px}.data-row label{display:flex;align-items:center;gap:8px;cursor:pointer}.data-row input{accent-color:var(--accent)}.data-row button{flex:0 0 auto}.file-picker{display:inline-block;margin:4px 0;padding:8px 11px;border:1px solid var(--border2);border-radius:8px;color:var(--accent);cursor:pointer;font-size:12px}.manager-note{margin:6px 0}
   </style>
 </head>
 <body>
@@ -29,7 +31,7 @@
       <nav class="nav" aria-label="Features">
         <button class="nav-item active" type="button" aria-current="page">◌ <span>Chat</span></button>
         <button class="nav-item" id="web-search-button" type="button" aria-label="Set web search to always">⌕ <span>Web search</span><span class="soon">Available</span></button>
-        <button class="nav-item" type="button" disabled aria-label="Memory and files coming soon">▧ <span>Memory &amp; files</span><span class="soon">Coming soon</span></button>
+        <button class="nav-item" id="memory-files-button" type="button">▧ <span>Memory &amp; files</span></button>
       </nav>
       <div class="account"><span class="status-dot" aria-hidden="true"></span><span id="brain-label">Connecting to Medha…</span></div>
       <div class="account-actions">
@@ -99,9 +101,20 @@
       <button class="auth-switch" type="button" id="auth-switch">Need an invite? Create an account</button>
     </div>
   </dialog>
+  <dialog id="memory-dialog" aria-labelledby="memory-title">
+    <section class="data-manager">
+      <header class="data-manager-head"><div><h2 id="memory-title">Memory &amp; files</h2><p>Choose what Medha remembers and which files a chat may use.</p></div><button class="icon-btn" id="memory-close" type="button" aria-label="Close memory and files">×</button></header>
+      <form id="memory-form" class="memory-form"><label for="memory-input">Remember a fact</label><div class="memory-entry"><input id="memory-input" maxlength="1000" required placeholder="For example: I prefer Python examples"><button class="primary-btn" type="submit">Save memory</button></div></form>
+      <div class="section-label">Saved memories</div><div id="memory-list" class="data-list" aria-live="polite"></div>
+      <div class="section-label">Uploaded files</div><p class="manager-note">TXT, Markdown, CSV, or text-based PDF. Up to 5 MB per file; files are private to your account.</p>
+      <label class="file-picker" for="upload-input">＋ Choose a file</label><input id="upload-input" type="file" accept=".txt,.md,.csv,.pdf" hidden>
+      <div id="upload-list" class="data-list" aria-live="polite"></div>
+      <p id="manager-status" class="manager-note" role="status"></p>
+    </section>
+  </dialog>
   <script>
     "use strict";
-    const state = { csrf: "", user: null, conversationId: null, controller: null, editing: false, lastUserText: "", theme: "dark", consentVersion: "" };
+    const state = { csrf: "", user: null, conversationId: null, controller: null, editing: false, lastUserText: "", theme: "dark", consentVersion: "", selectedUploadIds: [] };
     const $ = (id) => document.getElementById(id);
     const sidebar = $("sidebar"), overlay = $("overlay"), messages = $("messages"), welcome = $("welcome");
 
@@ -248,6 +261,11 @@
       if (!Array.isArray(sources) || sources.length === 0) return;
       const box = makeElement("div", "sources"), title = makeElement("div", "sources-title", "Sources"); box.append(title);
       for (const source of sources) {
+        if (source.kind === "file") {
+          box.append(makeElement("div", "source-link", `[${source.n}] ${source.title || "Uploaded file"} · chunk ${source.chunk}`));
+          if (source.snippet) box.append(makeElement("div", "source-snippet", source.snippet));
+          continue;
+        }
         const row = makeElement("a", "source-link", `[${source.n}] ${source.title || source.url || "Source"}`);
         try { const url = new URL(source.url); if (!["http:", "https:"].includes(url.protocol)) continue; row.href = url.href; }
         catch { continue; }
@@ -257,13 +275,20 @@
       main.append(box);
     }
 
+    function appendMemoryUsed(main, memories) {
+      if (!Array.isArray(memories) || memories.length === 0) return;
+      const box = makeElement("div", "memory-used", "Memory used");
+      for (const memory of memories) box.append(makeElement("div", "memory-used-item", memory.content || "Saved memory"));
+      main.append(box);
+    }
+
     function addAssistantActions(view, messageId) {
       const actions = makeElement("div", "message-actions");
       const copy = makeElement("button", "small-btn", "Copy"); copy.type = "button"; copy.addEventListener("click", async () => { try { await navigator.clipboard.writeText(view.body.textContent || ""); copy.textContent = "Copied"; setTimeout(() => copy.textContent = "Copy", 1200); } catch {} }); actions.append(copy);
       if (messageId) {
         for (const [rating, label] of [[1, "Helpful"], [-1, "Not helpful"]]) {
           const vote = makeElement("button", "small-btn", label); vote.type = "button";
-          vote.addEventListener("click", async () => { try { await request("/api/feedback", { method: "POST", body: JSON.stringify({ message_id: messageId, rating }) }); vote.textContent = "Thanks"; vote.disabled = true; } catch (error) { setStatus(error.message, true); } }); actions.append(vote);
+          vote.addEventListener("click", async () => { try { const comment = prompt("Optional feedback (leave blank to skip):", ""); await request("/api/feedback", { method: "POST", body: JSON.stringify({ message_id: messageId, rating, comment: comment || null }) }); vote.textContent = "Thanks"; vote.disabled = true; } catch (error) { setStatus(error.message, true); } }); actions.append(vote);
         }
       }
       const edit = makeElement("button", "small-btn", "Edit last prompt"); edit.type = "button";
@@ -294,7 +319,7 @@
         for (const item of data.messages) {
           const view = appendMessage(item.role, item.content, item.id);
           if (item.role === "user") state.lastUserText = item.content;
-          else { appendSources(view.main, item.sources); addAssistantActions(view, item.id); }
+          else { appendMemoryUsed(view.main, item.memory_used); appendSources(view.main, item.sources); addAssistantActions(view, item.id); }
         }
         await refreshConversations(); closeMenu(); setStatus("");
       } catch (error) { setStatus(error.message, true); }
@@ -319,6 +344,7 @@
         if (!event || !data) return;
         let payload; try { payload = JSON.parse(data); } catch { return; }
         if (event === "token") { if (payload.conversation_id) state.conversationId = payload.conversation_id; built += payload.text || ""; renderMarkdown(target, built); $("chat-area").scrollTop = $("chat-area").scrollHeight; }
+        if (event === "memory") appendMemoryUsed(view.main, payload);
         if (event === "sources") appendSources(view.main, payload);
         if (event === "done") { state.conversationId = payload.conversation_id || state.conversationId; messageId = payload.message_id || ""; }
         if (event === "error") { target.classList.add("error-note"); if (!built) target.textContent = payload.message || "The response failed."; }
@@ -350,7 +376,7 @@
         const response = await fetch("/api/chat", {
           method: "POST", credentials: "same-origin", signal: state.controller.signal,
           headers: { "Content-Type": "application/json", "X-CSRF-Token": state.csrf },
-          body: JSON.stringify({ message: action === "regenerate" ? null : clean, conversation_id: state.conversationId, action, search_mode: $("search-mode").value })
+          body: JSON.stringify({ message: action === "regenerate" ? null : clean, conversation_id: state.conversationId, action, search_mode: $("search-mode").value, upload_ids: state.selectedUploadIds })
         });
         if (!response.ok) { let detail = "Medha could not start this response."; try { detail = (await response.json()).detail || detail; } catch {} throw new Error(detail); }
         const result = await consumeStream(response, view.body, view);
@@ -393,7 +419,7 @@
 
     async function signOut() {
       try { await request("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
-      state.user = null; state.csrf = ""; state.conversationId = null; messages.replaceChildren(); welcome.hidden = false;
+      state.user = null; state.csrf = ""; state.conversationId = null; state.selectedUploadIds = []; messages.replaceChildren(); welcome.hidden = false;
       $("user-email").textContent = ""; $("auth-button").textContent = "Sign in";
       $("delete-conversations").hidden = true; $("delete-account").hidden = true;
       $("history-list").replaceChildren(makeElement("div", "empty-history", "Sign in to see conversations")); showAuth(false);
@@ -410,10 +436,48 @@
       } catch { $("brain-label").textContent = "Sign in to start a chat"; showAuth(false); }
     }
 
+    async function refreshMemoryFiles() {
+      const [memoryRows, uploadRows] = await Promise.all([request("/api/memories"), request("/api/uploads")]);
+      const memoryList = $("memory-list"), uploadList = $("upload-list");
+      memoryList.replaceChildren(); uploadList.replaceChildren();
+      if (!memoryRows.length) memoryList.append(makeElement("div", "manager-note", "No saved memories yet."));
+      for (const memory of memoryRows) {
+        const row = makeElement("div", "data-row"); row.append(makeElement("span", "", memory.content));
+        const edit = makeElement("button", "small-btn", "Edit"); edit.type = "button";
+        edit.addEventListener("click", async () => { const content = prompt("Edit this saved memory:", memory.content); if (content === null) return; try { await request(`/api/memories/${encodeURIComponent(memory.id)}`, { method: "PATCH", body: JSON.stringify({ content }) }); await refreshMemoryFiles(); } catch (error) { $("manager-status").textContent = error.message; } });
+        const remove = makeElement("button", "small-btn", "Delete"); remove.type = "button";
+        remove.addEventListener("click", async () => { try { await request(`/api/memories/${encodeURIComponent(memory.id)}`, { method: "DELETE" }); await refreshMemoryFiles(); } catch (error) { $("manager-status").textContent = error.message; } });
+        row.append(edit, remove); memoryList.append(row);
+      }
+      const presentIds = new Set(uploadRows.map(item => item.id));
+      state.selectedUploadIds = state.selectedUploadIds.filter(id => presentIds.has(id));
+      if (!uploadRows.length) uploadList.append(makeElement("div", "manager-note", "No files uploaded yet."));
+      for (const upload of uploadRows) {
+        const row = makeElement("div", "data-row"), label = document.createElement("label"), checkbox = document.createElement("input");
+        checkbox.type = "checkbox"; checkbox.checked = state.selectedUploadIds.includes(upload.id); checkbox.setAttribute("aria-label", `Use ${upload.original_name} in chat`);
+        checkbox.addEventListener("change", () => { state.selectedUploadIds = checkbox.checked ? [...state.selectedUploadIds, upload.id] : state.selectedUploadIds.filter(id => id !== upload.id); });
+        label.append(checkbox, makeElement("span", "", `${upload.original_name} · ${Math.ceil(upload.byte_size / 1024)} KB`)); row.append(label);
+        const remove = makeElement("button", "small-btn", "Delete"); remove.type = "button";
+        remove.addEventListener("click", async () => { try { await request(`/api/uploads/${encodeURIComponent(upload.id)}`, { method: "DELETE" }); await refreshMemoryFiles(); } catch (error) { $("manager-status").textContent = error.message; } });
+        row.append(remove); uploadList.append(row);
+      }
+    }
+
+    async function uploadSelectedFile(file) {
+      const form = new FormData(); form.append("file", file);
+      const response = await fetch("/api/uploads", { method: "POST", credentials: "same-origin", headers: { "X-CSRF-Token": state.csrf }, body: form });
+      if (!response.ok) { let message = "Upload failed."; try { message = (await response.json()).detail || message; } catch {} throw new Error(message); }
+      return response.json();
+    }
+
     function closeMenu() { sidebar.classList.remove("mobile-open"); overlay.classList.remove("visible"); }
 
     $("composer").addEventListener("submit", event => { event.preventDefault(); const value = $("message-input").value; sendMessage(value, state.editing ? "edit" : "send"); });
     $("new-chat").addEventListener("click", newChat);
+    $("memory-files-button").addEventListener("click", async () => { if (!state.user) { showAuth(false); return; } $("manager-status").textContent = ""; try { await refreshMemoryFiles(); $("memory-dialog").showModal(); } catch (error) { setStatus(error.message, true); } });
+    $("memory-close").addEventListener("click", () => $("memory-dialog").close());
+    $("memory-form").addEventListener("submit", async event => { event.preventDefault(); try { await request("/api/memories", { method: "POST", body: JSON.stringify({ content: $("memory-input").value }) }); $("memory-input").value = ""; await refreshMemoryFiles(); $("manager-status").textContent = "Memory saved."; } catch (error) { $("manager-status").textContent = error.message; } });
+    $("upload-input").addEventListener("change", async () => { const file = $("upload-input").files[0]; if (!file) return; $("manager-status").textContent = "Uploading…"; try { const uploaded = await uploadSelectedFile(file); state.selectedUploadIds.push(uploaded.id); await refreshMemoryFiles(); $("manager-status").textContent = `${uploaded.original_name} uploaded and selected for chat.`; } catch (error) { $("manager-status").textContent = error.message; } finally { $("upload-input").value = ""; } });
     $("web-search-button").addEventListener("click", () => { $("search-mode").value = "always"; $("search-mode").focus(); setStatus("Web search will run for the next message."); });
     $("stop-button").addEventListener("click", () => state.controller?.abort());
     $("auth-button").addEventListener("click", () => state.user ? signOut() : showAuth(false));

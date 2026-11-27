@@ -5,6 +5,7 @@ services:
     env_file: .env
     environment:
       MEDHA_DATABASE_PATH: /data/medha.sqlite3
+      MEDHA_UPLOAD_DIR: /data/uploads
       MEDHA_BRAIN_PROVIDER: ${MEDHA_BRAIN_PROVIDER:-openai_compat}
       MEDHA_BRAIN_BASE_URL: ${MEDHA_BRAIN_BASE_URL:-http://ollama:11434/v1}
     volumes:

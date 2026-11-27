@@ -5,6 +5,8 @@ The web server uses the repository's existing FastAPI/Uvicorn dependencies. Sear
 | Package | Pin | Purpose | Trade-off |
 |---|---|---|---|
 | `sentry-sdk` | `2.77.0` | Optional exception reporting when `SENTRY_DSN` is set. PII capture, request bodies and local variables are disabled, and a scrubber removes credentials and query strings. | The owner must operate a Sentry project and review its retention/access settings. It is absent from the data path when the DSN is unset. The owner authorized this addition. |
+| `python-multipart` | `0.0.34` | Parse bounded browser file uploads in FastAPI. | Multipart bodies are separately size-limited; keep the parser patched with deliberate pin updates. |
+| `pypdf` | `7.2.0` | Extract text from user-uploaded PDFs without external executables. | PDF page and extracted-text limits bound input; scanned image-only PDFs have no OCR. |
 | Ruff | `0.17.6` | CI static lint check for Python code. | Adds a pinned CI-only binary tool. |
 | pip-audit | `2.10.1` | CI check for known vulnerabilities in the resolved Python requirements. | Requires a vulnerability database lookup during CI. |
 
