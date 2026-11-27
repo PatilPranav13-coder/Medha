@@ -2,15 +2,41 @@ import re
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
+from backend.config import Settings
+from backend.medha_brain import build_brain
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app = FastAPI(title="Medha API")
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+settings = Settings.from_env()
+brain = build_brain(settings)
+
+
+@app.on_event("startup")
+def validate_brain_configuration() -> None:
+    # Failing at startup is clearer than accepting beta traffic with an unset model.
+    settings.validate()
+    brain.warmup()
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/readyz")
+def readyz() -> JSONResponse:
+    ready = brain.health()
+    return JSONResponse(
+        {"status": "ready" if ready else "not_ready", "brain": settings.brain_provider},
+        status_code=200 if ready else 503,
+    )
 
 
 class ChatRequest(BaseModel):
