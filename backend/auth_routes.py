@@ -100,7 +100,12 @@ def create_auth_router(settings: Settings, repository: AuthRepository) -> APIRou
     def signup(body: SignupBody, request: Request, response: Response) -> dict[str, object]:
         _, session = _session_from_request(request, repository)
         _check_csrf(request, session)
-        if not settings.signups_enabled or settings.maintenance or settings.read_only:
+        runtime_signups = repository.database.get_runtime_flag("signups_enabled", True)
+        runtime_maintenance = repository.database.get_runtime_flag("maintenance", False)
+        runtime_read_only = repository.database.get_runtime_flag("read_only", False)
+        if (not settings.signups_enabled or not runtime_signups
+                or settings.maintenance or runtime_maintenance
+                or settings.read_only or runtime_read_only):
             raise HTTPException(status_code=503, detail="Signup is currently unavailable.")
         if not body.consent or body.consent_version != settings.consent_notice_version:
             raise HTTPException(status_code=400, detail="Review and accept the current consent notice to create an account.")

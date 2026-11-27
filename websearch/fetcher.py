@@ -152,7 +152,6 @@ class PublicPageFetcher:
 
     def _robots_allowed(self, url: str, timeout: float) -> bool:
         parsed = self.validate_url(url)
-        port = parsed.port or (443 if parsed.scheme == "https" else 80)
         host = parsed.hostname or ""
         netloc = host if parsed.port is None else f"{host}:{parsed.port}"
         origin = f"{parsed.scheme}://{netloc}"

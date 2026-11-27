@@ -28,6 +28,10 @@ The 210-task suite and serving benchmark are local measurement tools. A stub run
 
 Request-size, IP/user token-bucket, conversation-length and generation limits run in the app process. Their in-memory state requires the documented single-worker launch configuration. Crisis and severe-harm checks are deterministic short-circuits, and untrusted search/file text uses one bounded wrapper for both current and future file Q&A.
 
+## 2026-11-27 — Keep CI lint within the launch code boundary
+
+CI runs Ruff's correctness-focused rules over the launch app, search, safety, model, evaluation, and operational scripts. The independently maintained `backend/medha_data_factory/` pipeline is excluded because the launch brief explicitly keeps it out of scope.
+
 ## 2026-11-27 — Version consent and minimize operational events
 
 Signup requires the current plain-language notice version and stores it in the same SQLite transaction as account creation. Operational events contain metadata only and default to 30-day retention. Legal files are drafts; commencement dates and notification duties remain owner/legal verification items.

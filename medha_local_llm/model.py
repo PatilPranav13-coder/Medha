@@ -10,7 +10,7 @@ import math
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, TypeAlias
+from typing import TypeAlias
 
 import torch
 from torch import Tensor, nn

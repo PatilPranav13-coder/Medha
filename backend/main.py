@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import threading
+import time
 import uuid
 from contextlib import asynccontextmanager
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -97,11 +100,50 @@ def _require_csrf(request: Request, session: dict | None) -> None:
     _check_csrf(request, session)
 
 
-def _require_writable(settings: Settings) -> None:
-    if settings.maintenance:
+def _require_writable(settings: Settings, database: Database) -> None:
+    maintenance = database.get_runtime_flag("maintenance", False)
+    read_only = database.get_runtime_flag("read_only", False)
+    if settings.maintenance or maintenance:
         raise HTTPException(status_code=503, detail="Medha is temporarily in maintenance mode.")
-    if settings.read_only:
+    if settings.read_only or read_only:
         raise HTTPException(status_code=503, detail="Medha is temporarily read-only.")
+
+
+def sanitize_sentry_event(event: dict, hint: dict) -> dict:
+    """Remove request content and credential-shaped fields before error events leave the host."""
+    del hint
+    cleaned_event = dict(event)
+    cleaned_event.pop("user", None)
+    request = cleaned_event.get("request")
+    if isinstance(request, dict):
+        request = dict(request)
+        for key in ("data", "cookies", "query_string"):
+            request.pop(key, None)
+        url = request.get("url")
+        if isinstance(url, str):
+            parts = urlsplit(url)
+            request["url"] = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        headers = request.get("headers")
+        if isinstance(headers, dict):
+            blocked = {"authorization", "cookie", "set-cookie", "x-csrf-token", "x-api-key"}
+            request["headers"] = {key: value for key, value in headers.items() if key.lower() not in blocked}
+        cleaned_event["request"] = request
+    return cleaned_event
+
+
+def configure_error_reporting(dsn: str | None) -> None:
+    """Initialize optional reporting only when an operator supplies a DSN."""
+    if not dsn:
+        return
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=dsn,
+        send_default_pii=False,
+        include_local_variables=False,
+        max_request_body_size="never",
+        before_send=sanitize_sentry_event,
+    )
 
 
 def _title_from_message(message: str) -> str:
@@ -175,6 +217,45 @@ class RequestSizeLimitMiddleware:
         await send({"type": "http.response.body", "body": body, "more_body": False})
 
 
+class RequestLoggingMiddleware:
+    """Log response metadata with a server-generated request ID, never request bodies."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self.logger = logging.getLogger("medha.request")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        request_id = str(uuid.uuid4())
+        scope.setdefault("state", {})["request_id"] = request_id
+        started = time.monotonic()
+        status_code = 500
+
+        async def capture_response(message: Message) -> None:
+            nonlocal status_code
+            if message.get("type") == "http.response.start":
+                status_code = int(message["status"])
+                headers = list(message.get("headers", []))
+                if not any(name.lower() == b"x-request-id" for name, _ in headers):
+                    headers.append((b"x-request-id", request_id.encode("ascii")))
+                message["headers"] = headers
+            await send(message)
+
+        try:
+            await self.app(scope, receive, capture_response)
+        finally:
+            record = {
+                "request_id": request_id,
+                "method": scope.get("method", ""),
+                "path": scope.get("path", ""),
+                "status": status_code,
+                "duration_ms": round((time.monotonic() - started) * 1000, 2),
+            }
+            self.logger.info(json.dumps(record, separators=(",", ":")))
+
+
 def create_app(
     settings: Settings | None = None,
     brain: Brain | None = None,
@@ -209,11 +290,13 @@ def create_app(
         configured.validate()
         auth.initialize(configured.bootstrap_invite_code)
         db.prune_events(configured.log_retention_days)
+        configure_error_reporting(configured.sentry_dsn)
         selected_brain.warmup()
         yield
 
     app = FastAPI(title="Medha API", lifespan=lifespan)
     app.add_middleware(RequestSizeLimitMiddleware, limit=configured.max_request_bytes)
+    app.add_middleware(RequestLoggingMiddleware)
     app.state.settings = configured
     app.state.brain = selected_brain
     app.state.database = db
@@ -239,6 +322,13 @@ def create_app(
             status_code=200 if ready else 503,
         )
 
+    @app.get("/api/admin/metrics")
+    def admin_metrics(request: Request) -> dict[str, int]:
+        _, session = _current_session(request, auth)
+        if session["user"]["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required.")
+        return db.counters()
+
     @app.get("/api/me")
     def me(request: Request) -> dict[str, object]:
         _, session = _current_session(request, auth)
@@ -253,7 +343,7 @@ def create_app(
     def create_conversation(body: ConversationCreate, request: Request) -> dict[str, object]:
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         identifier = chats.create_conversation(session["user"]["id"], body.title)
         return {"id": identifier, "title": body.title}
 
@@ -269,7 +359,7 @@ def create_app(
     def patch_conversation(conversation_id: str, body: ConversationPatch, request: Request) -> dict[str, bool]:
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         if not chats.rename_conversation(session["user"]["id"], conversation_id, body.title):
             raise HTTPException(status_code=404, detail="Conversation not found.")
         return {"ok": True}
@@ -278,7 +368,7 @@ def create_app(
     def delete_conversation(conversation_id: str, request: Request) -> Response:
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         if not chats.delete_conversation(session["user"]["id"], conversation_id):
             raise HTTPException(status_code=404, detail="Conversation not found.")
         return Response(status_code=204)
@@ -287,7 +377,7 @@ def create_app(
     def delete_all_conversations(request: Request) -> dict[str, bool]:
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         chats.delete_all_conversations(session["user"]["id"])
         return {"ok": True}
 
@@ -295,7 +385,7 @@ def create_app(
     async def chat(body: ChatBody, request: Request):
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         user_id = session["user"]["id"]
         try:
             ip_limiter.consume(request.client.host if request.client else "unknown")
@@ -357,7 +447,7 @@ def create_app(
                     headers={"Retry-After": "5"},
                 ) from exc
 
-        request_id = str(uuid.uuid4())
+        request_id = request.state.request_id
 
         async def stream():
             generated: list[str] = []
@@ -460,7 +550,7 @@ def create_app(
     def feedback(body: FeedbackBody, request: Request) -> dict[str, bool]:
         _, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         try:
             chats.add_feedback(session["user"]["id"], body.message_id, body.rating, body.comment)
         except KeyError as exc:
@@ -479,7 +569,7 @@ def create_app(
     def delete_account(request: Request, response: Response) -> Response:
         raw_token, session = _current_session(request, auth)
         _require_csrf(request, session)
-        _require_writable(configured)
+        _require_writable(configured, db)
         auth.revoke_session(raw_token)
         chats.delete_account(session["user"]["id"])
         response.delete_cookie(SESSION_COOKIE, path="/", secure=configured.cookie_secure, httponly=True, samesite="lax")

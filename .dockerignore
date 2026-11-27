@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+.env
+instance
+uploads
+logs
+reports
+medha_local_llm/checkpoints
+datasets

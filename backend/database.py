@@ -11,6 +11,8 @@ from typing import Iterator
 
 
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
+BOOLEAN_RUNTIME_FLAGS = frozenset({"maintenance", "read_only", "signups_enabled"})
+RUNTIME_FLAGS = BOOLEAN_RUNTIME_FLAGS | {"max_users"}
 
 
 class Database:
@@ -111,6 +113,57 @@ class Database:
         with self.transaction() as connection:
             result = connection.execute("DELETE FROM events WHERE created_at < ?", (cutoff,))
         return result.rowcount
+
+    def get_runtime_flag(self, name: str, default: bool | int) -> bool | int:
+        """Read a validated operator flag, falling back to the environment setting."""
+        if name not in RUNTIME_FLAGS:
+            raise ValueError("Unknown runtime flag.")
+        with self.connection() as connection:
+            row = connection.execute(
+                "SELECT flag_value FROM runtime_flags WHERE flag_name=?", (name,)
+            ).fetchone()
+        if row is None:
+            return default
+        value = int(row["flag_value"])
+        if name in BOOLEAN_RUNTIME_FLAGS:
+            if value not in {0, 1}:
+                raise ValueError("Stored boolean runtime flag is invalid.")
+            return bool(value)
+        if value < 1:
+            raise ValueError("Stored user cap must be positive.")
+        return value
+
+    def set_runtime_flag(self, name: str, value: bool | int) -> None:
+        """Persist only the small allowlist that the admin CLI can change."""
+        if name not in RUNTIME_FLAGS:
+            raise ValueError("Unknown runtime flag.")
+        if name in BOOLEAN_RUNTIME_FLAGS:
+            if type(value) is not bool:
+                raise ValueError("Boolean runtime flags require true or false.")
+            stored_value = int(value)
+        else:
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError("The user cap must be a positive integer.")
+            stored_value = value
+        with self.transaction() as connection:
+            connection.execute(
+                "INSERT INTO runtime_flags(flag_name, flag_value) VALUES (?, ?) "
+                "ON CONFLICT(flag_name) DO UPDATE SET flag_value=excluded.flag_value",
+                (name, stored_value),
+            )
+
+    def counters(self) -> dict[str, int]:
+        """Expose aggregate counts only; the admin page never receives user content."""
+        tables = ("users", "sessions", "conversations", "messages", "memories", "uploads", "feedback", "events")
+        with self.connection() as connection:
+            counts = {
+                name: int(connection.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0])
+                for name in tables
+            }
+            counts["disabled_users"] = int(
+                connection.execute("SELECT COUNT(*) FROM users WHERE disabled=1").fetchone()[0]
+            )
+        return counts
 
 
 def token_digest(token: str) -> str:

@@ -25,7 +25,7 @@ class AccountRepositoryTests(unittest.TestCase):
             versions = [row[0] for row in connection.execute("SELECT version FROM schema_migrations")]
             journal = connection.execute("PRAGMA journal_mode").fetchone()[0]
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        self.assertEqual(versions, [1, 2])
+        self.assertEqual(versions, [1, 2, 3])
         self.assertEqual(journal.lower(), "wal")
         self.assertTrue({"users", "sessions", "conversations", "messages", "memories", "uploads", "feedback", "consents", "invite_codes", "events"} <= tables)
 

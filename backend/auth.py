@@ -99,8 +99,10 @@ class AuthRepository:
                 or (invite["expires_at"] is not None and invite["expires_at"] <= current)
             ):
                 raise AuthError("Signup details are invalid.")
+            runtime_cap = self.database.get_runtime_flag("max_users", self.max_users)
+            max_users = min(self.max_users, runtime_cap)
             user_count = connection.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-            if user_count >= self.max_users:
+            if user_count >= max_users:
                 raise AuthError("Signup is currently unavailable.")
             try:
                 connection.execute(

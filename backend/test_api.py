@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import tempfile
 import threading
 import time
@@ -13,7 +14,7 @@ from backend.auth_routes import CSRF_COOKIE, SESSION_COOKIE
 from backend.config import Settings
 from backend.database import Database, token_digest
 from backend.main import create_app
-from backend.medha_brain import GenerationParams, StubBrain
+from backend.medha_brain import StubBrain
 from websearch.answer import SearchAnswer
 
 
@@ -25,19 +26,38 @@ class ASGIClient:
         self.cookies: dict[str, str] = {}
         self.disconnect_on_token = False
 
-    async def request(self, method: str, path: str, body: object | None = None, headers: dict[str, str] | None = None):
+    async def request(
+        self,
+        method: str,
+        path: str,
+        body: object | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         request_headers = {key.lower(): value for key, value in (headers or {}).items()}
         if body is not None:
             request_headers.setdefault("content-type", "application/json")
         if self.cookies:
-            request_headers["cookie"] = "; ".join(f"{key}={value}" for key, value in self.cookies.items())
-        encoded_headers = [(key.encode("latin-1"), value.encode("latin-1")) for key, value in request_headers.items()]
+            request_headers["cookie"] = "; ".join(
+                f"{key}={value}" for key, value in self.cookies.items()
+            )
+        encoded_headers = [
+            (key.encode("latin-1"), value.encode("latin-1"))
+            for key, value in request_headers.items()
+        ]
         raw_body = b"" if body is None else json.dumps(body).encode("utf-8")
         scope = {
-            "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
-            "method": method.upper(), "scheme": "https", "path": path,
-            "raw_path": path.encode("utf-8"), "query_string": b"", "headers": encoded_headers,
-            "client": ("127.0.0.1", 1000), "server": ("testserver", 443), "root_path": "",
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": method.upper(),
+            "scheme": "https",
+            "path": path,
+            "raw_path": path.encode("utf-8"),
+            "query_string": b"",
+            "headers": encoded_headers,
+            "client": ("127.0.0.1", 1000),
+            "server": ("testserver", 443),
+            "root_path": "",
         }
         sent = []
         first = True
@@ -53,11 +73,17 @@ class ASGIClient:
 
         async def send(message):
             sent.append(message)
-            if self.disconnect_on_token and message.get("type") == "http.response.body" and b"event: token" in message.get("body", b""):
+            if (
+                self.disconnect_on_token
+                and message.get("type") == "http.response.body"
+                and b"event: token" in message.get("body", b"")
+            ):
                 disconnect.set()
 
         await self.app(scope, receive, send)
-        start = next(message for message in sent if message["type"] == "http.response.start")
+        start = next(
+            message for message in sent if message["type"] == "http.response.start"
+        )
         response_headers = start.get("headers", [])
         for name, value in response_headers:
             if name.lower() == b"set-cookie":
@@ -69,16 +95,27 @@ class ASGIClient:
                     else:
                         self.cookies[key] = morsel.value
         response_body = b"".join(
-            message.get("body", b"") for message in sent if message["type"] == "http.response.body"
+            message.get("body", b"")
+            for message in sent
+            if message["type"] == "http.response.body"
         )
         return {
             "status": start["status"],
             "headers": response_headers,
             "body": response_body,
-            "json": json.loads(response_body) if response_body and b"application/json" in dict(response_headers).get(b"content-type", b"") else None,
+            "json": json.loads(response_body)
+            if response_body
+            and b"application/json" in dict(response_headers).get(b"content-type", b"")
+            else None,
         }
 
-    def sync_request(self, method: str, path: str, body: object | None = None, headers: dict[str, str] | None = None):
+    def sync_request(
+        self,
+        method: str,
+        path: str,
+        body: object | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         return asyncio.run(self.request(method, path, body, headers))
 
 
@@ -109,9 +146,15 @@ class ChatApiTests(unittest.TestCase):
         csrf = self.client.sync_request("GET", "/api/auth/csrf")
         self.csrf = csrf["json"]["csrf_token"]
         signup = self.client.sync_request(
-            "POST", "/api/auth/signup",
-            {"email": "student@example.edu", "password": "a sufficiently long password", "invite_code": "invite-one",
-             "consent": True, "consent_version": "2026-11-27-v1"},
+            "POST",
+            "/api/auth/signup",
+            {
+                "email": "student@example.edu",
+                "password": "a sufficiently long password",
+                "invite_code": "invite-one",
+                "consent": True,
+                "consent_version": "2026-11-27-v1",
+            },
             {"X-CSRF-Token": self.csrf},
         )
         self.assertEqual(signup["status"], 200)
@@ -137,34 +180,107 @@ class ChatApiTests(unittest.TestCase):
         self.database.create_invite_code("invite-consent")
         applicant = ASGIClient(self.app)
         csrf = applicant.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
-        base = {"email": "consent@example.edu", "password": "a sufficiently long password", "invite_code": "invite-consent"}
+        base = {
+            "email": "consent@example.edu",
+            "password": "a sufficiently long password",
+            "invite_code": "invite-consent",
+        }
         missing = applicant.sync_request(
-            "POST", "/api/auth/signup", {**base, "consent_version": notice["version"]},
+            "POST",
+            "/api/auth/signup",
+            {**base, "consent_version": notice["version"]},
             {"X-CSRF-Token": csrf},
         )
         stale = applicant.sync_request(
-            "POST", "/api/auth/signup", {**base, "consent": True, "consent_version": "old-version"},
+            "POST",
+            "/api/auth/signup",
+            {**base, "consent": True, "consent_version": "old-version"},
             {"X-CSRF-Token": csrf},
         )
         self.assertEqual(missing["status"], 400)
         self.assertEqual(stale["status"], 400)
         with self.database.connection() as connection:
             used = connection.execute(
-                "SELECT used_count FROM invite_codes WHERE code_hash=?", (token_digest("invite-consent"),)
+                "SELECT used_count FROM invite_codes WHERE code_hash=?",
+                (token_digest("invite-consent"),),
             ).fetchone()[0]
-            count = connection.execute("SELECT COUNT(*) FROM users WHERE email='consent@example.edu'").fetchone()[0]
+            count = connection.execute(
+                "SELECT COUNT(*) FROM users WHERE email='consent@example.edu'"
+            ).fetchone()[0]
         self.assertEqual(used, 0)
         self.assertEqual(count, 0)
         accepted = applicant.sync_request(
-            "POST", "/api/auth/signup", {**base, "consent": True, "consent_version": notice["version"]},
+            "POST",
+            "/api/auth/signup",
+            {**base, "consent": True, "consent_version": notice["version"]},
             {"X-CSRF-Token": csrf},
         )
         self.assertEqual(accepted["status"], 200)
         with self.database.connection() as connection:
             stored = connection.execute(
-                "SELECT notice_version FROM consents WHERE user_id=?", (accepted["json"]["user"]["id"],)
+                "SELECT notice_version FROM consents WHERE user_id=?",
+                (accepted["json"]["user"]["id"],),
             ).fetchone()[0]
         self.assertEqual(stored, notice["version"])
+
+    def test_admin_metrics_are_admin_only_and_return_counts_not_content(self):
+        denied = self.client.sync_request("GET", "/api/admin/metrics")
+        self.assertEqual(denied["status"], 403)
+        with self.database.transaction() as connection:
+            connection.execute(
+                "UPDATE users SET role='admin' WHERE email='student@example.edu'"
+            )
+        response = self.client.sync_request("GET", "/api/admin/metrics")
+        self.assertEqual(response["status"], 200)
+        self.assertEqual(response["json"]["users"], 1)
+        self.assertTrue(all(type(value) is int for value in response["json"].values()))
+        self.assertNotIn("student@example.edu", response["body"].decode("utf-8"))
+
+    def test_runtime_maintenance_flag_blocks_mutations_and_user_cap_uses_lower_bound(
+        self,
+    ):
+        self.database.set_runtime_flag("maintenance", True)
+        blocked = self._mutation("POST", "/api/conversations", {"title": "Blocked"})
+        self.assertEqual(blocked["status"], 503)
+        self.database.set_runtime_flag("maintenance", False)
+        self.database.set_runtime_flag("max_users", 1)
+        self.database.create_invite_code("invite-at-cap")
+        other = ASGIClient(self.app)
+        csrf = other.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
+        signup = other.sync_request(
+            "POST",
+            "/api/auth/signup",
+            {
+                "email": "second@example.edu",
+                "password": "another sufficiently long password",
+                "invite_code": "invite-at-cap",
+                "consent": True,
+                "consent_version": "2026-11-27-v1",
+            },
+            {"X-CSRF-Token": csrf},
+        )
+        self.assertEqual(signup["status"], 400)
+
+    def test_request_logs_include_a_server_id_but_never_request_content(self):
+        password = "a unique password that must never appear in logs"
+        email = "private-login@example.edu"
+        anonymous = ASGIClient(self.app)
+        csrf = anonymous.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
+        with self.assertLogs("medha.request", level="INFO") as captured:
+            response = anonymous.sync_request(
+                "POST",
+                "/api/auth/login",
+                {"email": email, "password": password},
+                {"X-CSRF-Token": csrf},
+            )
+        logs = "\n".join(captured.output)
+        self.assertEqual(response["status"], 401)
+        self.assertRegex(logs, r'"request_id":"[0-9a-f-]{36}"')
+        self.assertNotIn(password, logs)
+        self.assertNotIn(email, logs)
+        request_headers = {name.lower(): value for name, value in response["headers"]}
+        self.assertIn(b"x-request-id", request_headers)
+        self.assertEqual(len(re.findall(r'"request_id":"[0-9a-f-]{36}"', logs)), 1)
 
     def test_root_serves_real_client_with_safe_text_rendering(self):
         response = self.client.sync_request("GET", "/")
@@ -190,36 +306,66 @@ class ChatApiTests(unittest.TestCase):
         listing = self.client.sync_request("GET", "/api/conversations")
         self.assertEqual(len(listing["json"]), 1)
         conversation_id = listing["json"][0]["id"]
-        detail = self.client.sync_request("GET", f"/api/conversations/{conversation_id}")
-        self.assertEqual([message["role"] for message in detail["json"]["messages"]], ["user", "assistant"])
-        self.assertEqual(detail["json"]["messages"][1]["content"], "A fixed answer with **formatting**.")
+        detail = self.client.sync_request(
+            "GET", f"/api/conversations/{conversation_id}"
+        )
+        self.assertEqual(
+            [message["role"] for message in detail["json"]["messages"]],
+            ["user", "assistant"],
+        )
+        self.assertEqual(
+            detail["json"]["messages"][1]["content"],
+            "A fixed answer with **formatting**.",
+        )
 
-        regenerated = self._mutation("POST", "/api/chat", {"conversation_id": conversation_id, "action": "regenerate"})
+        regenerated = self._mutation(
+            "POST",
+            "/api/chat",
+            {"conversation_id": conversation_id, "action": "regenerate"},
+        )
         self.assertIn("event: done", regenerated["body"].decode("utf-8"))
-        edited = self._mutation("POST", "/api/chat", {
-            "conversation_id": conversation_id, "action": "edit", "message": "A corrected question"
-        })
+        edited = self._mutation(
+            "POST",
+            "/api/chat",
+            {
+                "conversation_id": conversation_id,
+                "action": "edit",
+                "message": "A corrected question",
+            },
+        )
         self.assertIn("event: done", edited["body"].decode("utf-8"))
-        final = self.client.sync_request("GET", f"/api/conversations/{conversation_id}")["json"]["messages"]
+        final = self.client.sync_request(
+            "GET", f"/api/conversations/{conversation_id}"
+        )["json"]["messages"]
         self.assertEqual(final[-2]["role"], "user")
         self.assertEqual(final[-2]["content"], "A corrected question")
         self.assertEqual(final[-1]["role"], "assistant")
 
     def test_state_changing_conversation_request_requires_csrf(self):
-        result = self.client.sync_request("POST", "/api/conversations", {"title": "No token"})
+        result = self.client.sync_request(
+            "POST", "/api/conversations", {"title": "No token"}
+        )
         self.assertEqual(result["status"], 403)
         created = self._mutation("POST", "/api/conversations", {"title": "Research"})
         self.assertEqual(created["status"], 200)
-        renamed = self._mutation("PATCH", f"/api/conversations/{created['json']['id']}", {"title": "ISRO notes"})
+        renamed = self._mutation(
+            "PATCH",
+            f"/api/conversations/{created['json']['id']}",
+            {"title": "ISRO notes"},
+        )
         self.assertEqual(renamed["status"], 200)
 
     def test_conversation_ownership_feedback_export_and_account_deletion(self):
         stream = self._mutation("POST", "/api/chat", {"message": "Keep this"})
         del stream
         own = self.client.sync_request("GET", "/api/conversations")["json"][0]
-        detail = self.client.sync_request("GET", f"/api/conversations/{own['id']}")["json"]
+        detail = self.client.sync_request("GET", f"/api/conversations/{own['id']}")[
+            "json"
+        ]
         message_id = detail["messages"][-1]["id"]
-        feedback = self._mutation("POST", "/api/feedback", {"message_id": message_id, "rating": 1})
+        feedback = self._mutation(
+            "POST", "/api/feedback", {"message_id": message_id, "rating": 1}
+        )
         self.assertEqual(feedback["status"], 200)
         exported = self.client.sync_request("GET", "/api/export")
         self.assertEqual(exported["json"]["email"], "student@example.edu")
@@ -228,17 +374,27 @@ class ChatApiTests(unittest.TestCase):
         self.database.create_invite_code("invite-two")
         other = ASGIClient(self.app)
         csrf = other.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
-        other_signup = other.sync_request("POST", "/api/auth/signup", {
-            "email": "other@example.edu", "password": "another sufficiently long password", "invite_code": "invite-two",
-            "consent": True, "consent_version": "2026-11-27-v1",
-        }, {"X-CSRF-Token": csrf})
+        other_signup = other.sync_request(
+            "POST",
+            "/api/auth/signup",
+            {
+                "email": "other@example.edu",
+                "password": "another sufficiently long password",
+                "invite_code": "invite-two",
+                "consent": True,
+                "consent_version": "2026-11-27-v1",
+            },
+            {"X-CSRF-Token": csrf},
+        )
         self.assertEqual(other_signup["status"], 200)
         hidden = other.sync_request("GET", f"/api/conversations/{own['id']}")
         self.assertEqual(hidden["status"], 404)
 
         deleted_chats = self._mutation("DELETE", "/api/conversations")
         self.assertEqual(deleted_chats["json"]["ok"], True)
-        self.assertEqual(self.client.sync_request("GET", "/api/conversations")["json"], [])
+        self.assertEqual(
+            self.client.sync_request("GET", "/api/conversations")["json"], []
+        )
 
         deleted = self._mutation("DELETE", "/api/account")
         self.assertEqual(deleted["status"], 204)
@@ -246,13 +402,20 @@ class ChatApiTests(unittest.TestCase):
 
     def test_maintenance_and_read_only_flags_reject_mutations(self):
         readonly_settings = Settings(
-            database_path=str(self.database.path), read_only=True, cookie_secure=True,
+            database_path=str(self.database.path),
+            read_only=True,
+            cookie_secure=True,
         )
-        readonly_app = create_app(readonly_settings, self.brain, self.database, OfflineSearch())
+        readonly_app = create_app(
+            readonly_settings, self.brain, self.database, OfflineSearch()
+        )
         readonly_client = ASGIClient(readonly_app)
         readonly_client.cookies.update(self.client.cookies)
         response = readonly_client.sync_request(
-            "POST", "/api/conversations", {"title": "Blocked"}, {"X-CSRF-Token": self.csrf}
+            "POST",
+            "/api/conversations",
+            {"title": "Blocked"},
+            {"X-CSRF-Token": self.csrf},
         )
         self.assertEqual(response["status"], 503)
 
@@ -276,7 +439,10 @@ class ChatApiTests(unittest.TestCase):
         client.cookies.update(self.client.cookies)
         client.disconnect_on_token = True
         result = client.sync_request(
-            "POST", "/api/chat", {"message": "stop after first chunk"}, {"X-CSRF-Token": self.csrf}
+            "POST",
+            "/api/chat",
+            {"message": "stop after first chunk"},
+            {"X-CSRF-Token": self.csrf},
         )
         self.assertEqual(result["status"], 200)
         self.assertTrue(brain.closed.wait(timeout=1))
@@ -285,54 +451,101 @@ class ChatApiTests(unittest.TestCase):
             time.sleep(0.005)
         self.assertEqual(app.state.generation_gate.active, 0)
         conversation = client.sync_request("GET", "/api/conversations")["json"][0]
-        messages = client.sync_request("GET", f"/api/conversations/{conversation['id']}")["json"]["messages"]
-        self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
+        messages = client.sync_request(
+            "GET", f"/api/conversations/{conversation['id']}"
+        )["json"]["messages"]
+        self.assertEqual(
+            [message["role"] for message in messages], ["user", "assistant"]
+        )
 
     def test_search_override_streams_cited_result_sources_and_skips_brain(self):
         class SearchFixture:
-            def __init__(self): self.calls = []
+            def __init__(self):
+                self.calls = []
+
             def search(self, query, mode="auto"):
                 self.calls.append((query, mode))
-                return SearchAnswer("A spacecraft uses a reaction wheel. [1]", [{
-                    "n": 1, "title": "Reaction wheel overview", "url": "https://example.org/wheel", "snippet": "It changes orientation."
-                }], True)
+                return SearchAnswer(
+                    "A spacecraft uses a reaction wheel. [1]",
+                    [
+                        {
+                            "n": 1,
+                            "title": "Reaction wheel overview",
+                            "url": "https://example.org/wheel",
+                            "snippet": "It changes orientation.",
+                        }
+                    ],
+                    True,
+                )
 
         fixture = SearchFixture()
+
         class NeverBrain(StubBrain):
             def generate_stream(self, messages, params):
-                raise AssertionError("Search should provide the answer without calling the brain.")
+                raise AssertionError(
+                    "Search should provide the answer without calling the brain."
+                )
                 yield "unreachable"
 
         app = create_app(self.settings, NeverBrain(), self.database, fixture)
-        client = ASGIClient(app); client.cookies.update(self.client.cookies)
-        response = client.sync_request("POST", "/api/chat", {
-            "message": "Use a source for reaction wheels", "search_mode": "always"
-        }, {"X-CSRF-Token": self.csrf})
+        client = ASGIClient(app)
+        client.cookies.update(self.client.cookies)
+        response = client.sync_request(
+            "POST",
+            "/api/chat",
+            {"message": "Use a source for reaction wheels", "search_mode": "always"},
+            {"X-CSRF-Token": self.csrf},
+        )
         stream = response["body"].decode()
         self.assertIn("A spacecraft uses a reaction wheel. [1]", stream)
         self.assertIn("Reaction wheel overview", stream)
         self.assertEqual(fixture.calls[0][1], "always")
-        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0]["id"]
-        saved = client.sync_request("GET", f"/api/conversations/{conversation_id}")["json"]["messages"][-1]
+        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0][
+            "id"
+        ]
+        saved = client.sync_request("GET", f"/api/conversations/{conversation_id}")[
+            "json"
+        ]["messages"][-1]
         self.assertEqual(saved["sources"][0]["url"], "https://example.org/wheel")
 
-    def test_search_deadline_returns_an_honest_failure_without_waiting_for_provider(self):
+    def test_search_deadline_returns_an_honest_failure_without_waiting_for_provider(
+        self,
+    ):
         class SlowSearch:
             deadline_seconds = 0.01
+
             def search(self, query, mode="auto"):
                 time.sleep(0.08)
-                return SearchAnswer("Late source claim [1]", [{"n": 1, "title": "Late", "url": "https://example.org", "snippet": "late"}], True)
+                return SearchAnswer(
+                    "Late source claim [1]",
+                    [
+                        {
+                            "n": 1,
+                            "title": "Late",
+                            "url": "https://example.org",
+                            "snippet": "late",
+                        }
+                    ],
+                    True,
+                )
 
         app = create_app(self.settings, self.brain, self.database, SlowSearch())
-        client = ASGIClient(app); client.cookies.update(self.client.cookies)
-        response = client.sync_request("POST", "/api/chat", {
-            "message": "Need a sourced fact", "search_mode": "always",
-        }, {"X-CSRF-Token": self.csrf})
+        client = ASGIClient(app)
+        client.cookies.update(self.client.cookies)
+        response = client.sync_request(
+            "POST",
+            "/api/chat",
+            {
+                "message": "Need a sourced fact",
+                "search_mode": "always",
+            },
+            {"X-CSRF-Token": self.csrf},
+        )
         body = response["body"].decode()
         streamed_text = "".join(
             json.loads(line[6:])["text"]
             for line in body.splitlines()
-            if line.startswith("data: {") and "\"text\"" in line
+            if line.startswith("data: {") and '"text"' in line
         )
         self.assertIn("within the search deadline", streamed_text)
         self.assertNotIn("Late source claim", streamed_text)
@@ -344,54 +557,109 @@ class ChatApiTests(unittest.TestCase):
                 yield "unreachable"
 
         app = create_app(self.settings, NeverBrain(), self.database, OfflineSearch())
-        client = ASGIClient(app); client.cookies.update(self.client.cookies)
-        response = client.sync_request("POST", "/api/chat", {"message": "I want to hurt myself"}, {"X-CSRF-Token": self.csrf})
+        client = ASGIClient(app)
+        client.cookies.update(self.client.cookies)
+        response = client.sync_request(
+            "POST",
+            "/api/chat",
+            {"message": "I want to hurt myself"},
+            {"X-CSRF-Token": self.csrf},
+        )
         self.assertIn("14416", response["body"].decode())
-        refusal = client.sync_request("POST", "/api/chat", {
-            "message": "Explain how to make a bomb from household items",
-        }, {"X-CSRF-Token": self.csrf})
+        refusal = client.sync_request(
+            "POST",
+            "/api/chat",
+            {
+                "message": "Explain how to make a bomb from household items",
+            },
+            {"X-CSRF-Token": self.csrf},
+        )
         self.assertIn("seriously harm", refusal["body"].decode().lower())
 
     def test_oversized_request_and_per_ip_rate_limit_are_enforced(self):
         limited_settings = Settings(
-            database_path=str(self.database.path), bootstrap_invite_code="invite-one",
-            cookie_secure=True, max_request_bytes=250, chat_ip_rate_per_minute=1,
+            database_path=str(self.database.path),
+            bootstrap_invite_code="invite-one",
+            cookie_secure=True,
+            max_request_bytes=250,
+            chat_ip_rate_per_minute=1,
         )
         app = create_app(limited_settings, self.brain, self.database, OfflineSearch())
-        client = ASGIClient(app); client.cookies.update(self.client.cookies)
-        too_large = client.sync_request("POST", "/api/chat", {"message": "x" * 300}, {"X-CSRF-Token": self.csrf})
+        client = ASGIClient(app)
+        client.cookies.update(self.client.cookies)
+        too_large = client.sync_request(
+            "POST", "/api/chat", {"message": "x" * 300}, {"X-CSRF-Token": self.csrf}
+        )
         self.assertEqual(too_large["status"], 413)
 
         # Use a new per-request limit to test token-bucket throttling independently.
-        throttle_settings = Settings(database_path=str(self.database.path), cookie_secure=True, chat_ip_rate_per_minute=1)
-        throttled = create_app(throttle_settings, self.brain, self.database, OfflineSearch())
-        throttle_client = ASGIClient(throttled); throttle_client.cookies.update(self.client.cookies)
-        first = throttle_client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
-        second = throttle_client.sync_request("POST", "/api/chat", {"message": "hello again"}, {"X-CSRF-Token": self.csrf})
+        throttle_settings = Settings(
+            database_path=str(self.database.path),
+            cookie_secure=True,
+            chat_ip_rate_per_minute=1,
+        )
+        throttled = create_app(
+            throttle_settings, self.brain, self.database, OfflineSearch()
+        )
+        throttle_client = ASGIClient(throttled)
+        throttle_client.cookies.update(self.client.cookies)
+        first = throttle_client.sync_request(
+            "POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf}
+        )
+        second = throttle_client.sync_request(
+            "POST", "/api/chat", {"message": "hello again"}, {"X-CSRF-Token": self.csrf}
+        )
         self.assertEqual(first["status"], 200)
         self.assertEqual(second["status"], 429)
 
         user_limited_settings = Settings(
-            database_path=str(self.database.path), cookie_secure=True,
-            chat_ip_rate_per_minute=100, chat_user_rate_per_minute=1,
+            database_path=str(self.database.path),
+            cookie_secure=True,
+            chat_ip_rate_per_minute=100,
+            chat_user_rate_per_minute=1,
         )
-        user_limited = create_app(user_limited_settings, self.brain, self.database, OfflineSearch())
-        user_client = ASGIClient(user_limited); user_client.cookies.update(self.client.cookies)
-        first_for_user = user_client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
-        second_for_user = user_client.sync_request("POST", "/api/chat", {"message": "another hello"}, {"X-CSRF-Token": self.csrf})
+        user_limited = create_app(
+            user_limited_settings, self.brain, self.database, OfflineSearch()
+        )
+        user_client = ASGIClient(user_limited)
+        user_client.cookies.update(self.client.cookies)
+        first_for_user = user_client.sync_request(
+            "POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf}
+        )
+        second_for_user = user_client.sync_request(
+            "POST",
+            "/api/chat",
+            {"message": "another hello"},
+            {"X-CSRF-Token": self.csrf},
+        )
         self.assertEqual(first_for_user["status"], 200)
         self.assertEqual(second_for_user["status"], 429)
 
     def test_message_count_cap_stops_additional_turns(self):
-        capped_settings = Settings(database_path=str(self.database.path), cookie_secure=True, max_conversation_messages=2)
+        capped_settings = Settings(
+            database_path=str(self.database.path),
+            cookie_secure=True,
+            max_conversation_messages=2,
+        )
         app = create_app(capped_settings, self.brain, self.database, OfflineSearch())
-        client = ASGIClient(app); client.cookies.update(self.client.cookies)
-        first = client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
+        client = ASGIClient(app)
+        client.cookies.update(self.client.cookies)
+        first = client.sync_request(
+            "POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf}
+        )
         self.assertEqual(first["status"], 200)
-        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0]["id"]
-        second = client.sync_request("POST", "/api/chat", {
-            "message": "another turn", "conversation_id": conversation_id,
-        }, {"X-CSRF-Token": self.csrf})
+        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0][
+            "id"
+        ]
+        second = client.sync_request(
+            "POST",
+            "/api/chat",
+            {
+                "message": "another turn",
+                "conversation_id": conversation_id,
+            },
+            {"X-CSRF-Token": self.csrf},
+        )
         self.assertEqual(second["status"], 413)
 
 

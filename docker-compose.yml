@@ -1,12 +1,65 @@
 services:
+  app:
+    image: medha-app:local
+    build: .
+    env_file: .env
+    environment:
+      MEDHA_DATABASE_PATH: /data/medha.sqlite3
+      MEDHA_BRAIN_PROVIDER: ${MEDHA_BRAIN_PROVIDER:-openai_compat}
+      MEDHA_BRAIN_BASE_URL: ${MEDHA_BRAIN_BASE_URL:-http://ollama:11434/v1}
+    volumes:
+      - medha_data:/data
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  caddy:
+    image: caddy:2.11.9
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      MEDHA_DOMAIN: ${MEDHA_DOMAIN:?Set MEDHA_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  backup:
+    image: medha-app:local
+    entrypoint:
+      - sh
+      - -c
+      - until [ -f /data/medha.sqlite3 ]; do sleep 30; done; while true; do python scripts/backup.py create --database /data/medha.sqlite3 --destination /data/backups --keep 7; sleep 86400; done
+    volumes:
+      - medha_data:/data
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_started
+
   ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.40.18}
     profiles: ["local-brain"]
     volumes:
       - ollama_data:/root/.ollama
-    ports:
-      - "127.0.0.1:11434:11434"
+    expose:
+      - "11434"
     restart: unless-stopped
 
 volumes:
+  medha_data:
+  caddy_data:
+  caddy_config:
   ollama_data:

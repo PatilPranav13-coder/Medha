@@ -65,6 +65,7 @@ class Settings:
     log_retention_days: int = 30
     consent_notice_version: str = NOTICE_VERSION
     grievance_email: str | None = None
+    sentry_dsn: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -103,6 +104,7 @@ class Settings:
             log_retention_days=_integer("MEDHA_LOG_RETENTION_DAYS", 30),
             consent_notice_version=os.getenv("MEDHA_CONSENT_NOTICE_VERSION", NOTICE_VERSION).strip(),
             grievance_email=os.getenv("GRIEVANCE_EMAIL", "").strip() or None,
+            sentry_dsn=os.getenv("SENTRY_DSN", "").strip() or None,
         )
 
     def validate(self) -> None:
@@ -130,5 +132,7 @@ class Settings:
             raise ValueError("MEDHA_LOG_RETENTION_DAYS must be between 1 and 3650.")
         if not self.consent_notice_version or len(self.consent_notice_version) > 64:
             raise ValueError("MEDHA_CONSENT_NOTICE_VERSION must be a non-empty version label of at most 64 characters.")
+        if self.sentry_dsn and not self.sentry_dsn.startswith("https://"):
+            raise ValueError("SENTRY_DSN must be an https URL when configured.")
         if not self.database_path.strip():
             raise ValueError("MEDHA_DATABASE_PATH cannot be empty.")

@@ -1,11 +1,9 @@
 """Run model-produced code in short-lived, memory-bounded, network-restricted subprocesses."""
 from __future__ import annotations
 
-import builtins
 import json
 import os
 import re
-import sqlite3
 import subprocess
 import sys
 import tempfile
