@@ -39,7 +39,7 @@ class AccountRepositoryTests(unittest.TestCase):
 
     def test_signup_requires_a_valid_single_use_invite_and_hashes_session(self):
         user, session_token, csrf_token = self.repository.signup(
-            "Student@Example.edu", "this is a long password", "invite-one", now=1000
+            "Student@Example.edu", "this is a long password", "invite-one", "2026-11-27-v1", now=1000
         )
         self.assertEqual(user["email"], "student@example.edu")
         self.assertEqual(len(session_token.encode("ascii")), 43)
@@ -52,18 +52,23 @@ class AccountRepositoryTests(unittest.TestCase):
             invite = connection.execute("SELECT used_count FROM invite_codes").fetchone()[0]
         self.assertEqual(stored, token_digest(session_token))
         self.assertEqual(invite, 1)
+        with self.database.connection() as connection:
+            consent = connection.execute(
+                "SELECT notice_version FROM consents WHERE user_id=?", (user["id"],)
+            ).fetchone()
+        self.assertEqual(consent["notice_version"], "2026-11-27-v1")
         with self.assertRaises(AuthError):
-            self.repository.signup("second@example.edu", "this is a long password", "invite-one")
+            self.repository.signup("second@example.edu", "this is a long password", "invite-one", "2026-11-27-v1")
 
     def test_signup_enforces_password_minimum_and_total_user_cap(self):
         with self.assertRaisesRegex(ValueError, "10 characters"):
-            self.repository.signup("a@example.edu", "short", "invite-one")
-        user, _, _ = self.repository.signup("a@example.edu", "this is a long password", "invite-one")
+            self.repository.signup("a@example.edu", "short", "invite-one", "2026-11-27-v1")
+        user, _, _ = self.repository.signup("a@example.edu", "this is a long password", "invite-one", "2026-11-27-v1")
         self.database.create_invite_code("invite-two")
-        self.repository.signup("b@example.edu", "another long password", "invite-two")
+        self.repository.signup("b@example.edu", "another long password", "invite-two", "2026-11-27-v1")
         self.database.create_invite_code("invite-three")
         with self.assertRaisesRegex(AuthError, "unavailable"):
-            self.repository.signup("c@example.edu", "third long password", "invite-three")
+            self.repository.signup("c@example.edu", "third long password", "invite-three", "2026-11-27-v1")
         with self.database.connection() as connection:
             used = connection.execute(
                 "SELECT used_count FROM invite_codes WHERE code_hash=?", (token_digest("invite-three"),)
@@ -72,7 +77,7 @@ class AccountRepositoryTests(unittest.TestCase):
         self.assertTrue(user["id"])
 
     def test_repeated_failures_lock_account_and_login_errors_are_generic(self):
-        self.repository.signup("locked@example.edu", "long enough password", "invite-one", now=1000)
+        self.repository.signup("locked@example.edu", "long enough password", "invite-one", "2026-11-27-v1", now=1000)
         messages = []
         for index in range(5):
             with self.assertRaises(AuthError) as raised:
@@ -91,7 +96,7 @@ class AccountRepositoryTests(unittest.TestCase):
             self.repository.login("locked@example.edu", "long enough password", now=2030)
 
     def test_logout_revokes_session(self):
-        _, token, _ = self.repository.signup("logout@example.edu", "long enough password", "invite-one", now=1000)
+        _, token, _ = self.repository.signup("logout@example.edu", "long enough password", "invite-one", "2026-11-27-v1", now=1000)
         self.assertIsNotNone(self.repository.find_session(token, now=1001))
         self.repository.revoke_session(token, now=1002)
         self.assertIsNone(self.repository.find_session(token, now=1003))

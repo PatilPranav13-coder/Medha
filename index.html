@@ -13,6 +13,7 @@
     main{min-width:0;display:flex;flex-direction:column;position:relative}.topbar{height:62px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 clamp(16px,4vw,42px);border-bottom:1px solid var(--border)}.icon-btn{display:grid;place-items:center;width:35px;height:35px;background:transparent;border:1px solid transparent;border-radius:9px;cursor:pointer;color:var(--muted)}.icon-btn:hover{background:var(--bg3);border-color:var(--border);color:var(--text)}.top-title{font-weight:600;letter-spacing:.01em}.top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}.user-chip{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}.chat-area{flex:1;min-height:0;overflow:auto;scroll-behavior:smooth;padding:32px 18px 20px}.chat-inner{width:min(830px,100%);margin:0 auto;display:flex;flex-direction:column;gap:23px}.welcome{margin:auto 0;text-align:center;padding:4vh 10px 8vh}.welcome-mark{margin:0 auto 16px;width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(140deg,#96a9ff,#4562d0);font:26px Georgia,serif;color:white;box-shadow:0 14px 36px #304ba550}.welcome h1{font:clamp(28px,4vw,40px) Georgia,serif;letter-spacing:-.04em;margin:0}.welcome p{max-width:580px;color:var(--muted);line-height:1.6;margin:12px auto 22px}.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:650px;margin:0 auto}.suggestion{border:1px solid var(--border2);border-radius:11px;background:var(--bg2);padding:12px;text-align:left;cursor:pointer;color:var(--text)}.suggestion:hover{border-color:var(--accent);background:var(--bg3)}.suggestion small{display:block;color:var(--muted);margin-top:4px;font-size:12px}.messages{display:grid;gap:25px}.message{display:grid;grid-template-columns:31px minmax(0,1fr);gap:11px;max-width:780px}.message.user{margin-left:auto;grid-template-columns:minmax(0,1fr) 31px}.message.user .avatar{grid-column:2;grid-row:1;background:var(--accent2)}.message.user .message-main{grid-column:1;grid-row:1;justify-self:end;max-width:min(650px,100%)}.avatar{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--bg4);font-size:13px;color:var(--text)}.message-main{min-width:0}.message-content{line-height:1.68;overflow-wrap:anywhere}.message.user .message-content{padding:9px 13px;border-radius:13px 4px 13px 13px;background:var(--bg3);white-space:pre-wrap}.message-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;margin:1px 0 7px}.ai-badge{border:1px solid var(--border2);border-radius:20px;padding:2px 6px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--quiet)}.message-actions{display:flex;gap:5px;margin-top:9px;opacity:.86}.small-btn{border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:7px;padding:5px 8px;font-size:11px;cursor:pointer}.small-btn:hover{background:var(--bg3);color:var(--text)}.small-btn:disabled{opacity:.55;cursor:default}.message-content p{margin:0 0 10px}.message-content p:last-child{margin-bottom:0}.message-content ul,.message-content ol{padding-left:22px;margin:6px 0 12px}.message-content h2,.message-content h3{margin:15px 0 7px;font-size:1.07em}.inline-code{font-family:Consolas,monospace;background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:.94em}.code-wrap{position:relative;margin:12px 0;border:1px solid var(--border2);border-radius:11px;background:#090b10;overflow:hidden}.code-head{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;color:#a6aec8;background:#171a24;border-bottom:1px solid #ffffff12;font:11px Consolas,monospace}.code-wrap pre{margin:0;padding:12px;overflow:auto;color:#e5e9f8;font:12px/1.6 Consolas,monospace;tab-size:2}.message-content a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}.sources{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}.sources-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}.source-link{display:block;color:var(--accent);font-size:12px;margin:5px 0;overflow-wrap:anywhere}.error-note{color:var(--red)}
     .composer-wrap{flex:0 0 auto;padding:8px 18px 16px;background:linear-gradient(transparent,var(--bg) 25%)}.composer-inner{width:min(830px,100%);margin:0 auto}.composer{display:flex;align-items:end;gap:8px;padding:7px;border:1px solid var(--border2);border-radius:15px;background:var(--bg2);box-shadow:0 8px 28px #0002}.composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #7895ff20}.composer textarea{flex:1;min-width:0;max-height:180px;min-height:42px;resize:vertical;border:0;outline:0;background:transparent;color:var(--text);padding:10px 9px;line-height:1.5}.composer textarea::placeholder{color:var(--quiet)}.send-btn,.stop-btn{width:39px;height:39px;border:0;border-radius:11px;display:grid;place-items:center;background:var(--accent2);color:white;cursor:pointer;font-size:18px}.send-btn:disabled{opacity:.45;cursor:not-allowed}.stop-btn{background:#7e3541;font-size:12px;width:auto;padding:0 12px}.disclaimer{text-align:center;color:var(--quiet);font-size:10px;margin:8px 0 0}.statusline{min-height:17px;color:var(--muted);font-size:11px;text-align:center;margin-top:5px}.overlay{display:none}
     dialog{width:min(430px,calc(100% - 28px));padding:0;border:1px solid var(--border2);border-radius:16px;background:var(--bg2);color:var(--text);box-shadow:var(--panel-shadow)}dialog::backdrop{background:#05060acc;backdrop-filter:blur(4px)}.auth-box{padding:25px}.auth-box h2{font:24px Georgia,serif;margin:0 0 5px}.auth-box p{color:var(--muted);font-size:12px;line-height:1.55;margin:0 0 18px}.field{display:grid;gap:6px;margin:11px 0}.field label{font-size:12px;color:var(--muted)}.field input{width:100%;border:1px solid var(--border2);border-radius:9px;background:var(--bg);color:var(--text);padding:10px}.auth-submit{margin-top:9px}.auth-error{min-height:18px;color:var(--red);font-size:12px;margin:8px 0}.auth-switch{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:10px 0 0;font-size:12px}.empty-history{padding:10px;color:var(--quiet);font-size:12px}.mobile-close{display:none}
+    .account-actions{display:grid;gap:5px;padding:0 7px}.account-actions button{border:0;background:transparent;color:var(--muted);text-align:left;padding:6px 0;cursor:pointer;font-size:11px}.account-actions button:hover{color:var(--red)}.consent-panel{border:1px solid var(--border2);border-radius:10px;padding:12px;margin:8px 0;color:var(--muted);font-size:12px;line-height:1.5}.consent-panel ul{padding-left:18px;margin:0 0 10px}.consent-panel li+li{margin-top:5px}.consent-accept{display:flex;gap:8px;align-items:flex-start;color:var(--text)}.consent-accept input{margin-top:3px}
     @media(max-width:760px){.app{grid-template-columns:1fr}aside{position:fixed;inset:0 auto 0 0;width:min(var(--sidebar),85vw);transform:translateX(-105%);box-shadow:var(--panel-shadow)}aside.mobile-open{transform:translateX(0)}.overlay.visible{display:block;position:fixed;inset:0;background:#0008;z-index:2}.mobile-close{display:grid;margin-left:auto}.topbar{height:56px;padding:0 13px}.chat-area{padding:20px 14px 15px}.composer-wrap{padding:6px 12px 12px}.suggestions{grid-template-columns:1fr}.welcome{padding:2vh 4px 5vh}.message{grid-template-columns:27px minmax(0,1fr);gap:8px}.avatar{width:27px;height:27px}.top-actions{gap:3px}.user-chip{max-width:100px}.message-actions{opacity:1}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
     .search-mode{max-width:112px;min-height:38px;border:1px solid var(--border2);border-radius:9px;background:var(--bg3);color:var(--text);padding:0 7px;font-size:11px}
@@ -31,6 +32,10 @@
         <button class="nav-item" type="button" disabled aria-label="Memory and files coming soon">▧ <span>Memory &amp; files</span><span class="soon">Coming soon</span></button>
       </nav>
       <div class="account"><span class="status-dot" aria-hidden="true"></span><span id="brain-label">Connecting to Medha…</span></div>
+      <div class="account-actions">
+        <button id="delete-conversations" type="button" hidden>Delete all my conversations</button>
+        <button id="delete-account" type="button" hidden>Delete my account</button>
+      </div>
     </aside>
     <div class="overlay" id="overlay"></div>
     <main>
@@ -82,6 +87,12 @@
         <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
         <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required minlength="10" maxlength="128"></div>
         <div class="field" id="invite-field" hidden><label for="invite-code">Invite code</label><input id="invite-code" name="invite_code" autocomplete="off" maxlength="256"></div>
+        <fieldset class="consent-panel" id="consent-panel" hidden>
+          <legend>Consent for the Medha beta</legend>
+          <p>Review this notice before creating an account.</p>
+          <ul id="consent-notice-list"></ul>
+          <label class="consent-accept"><input id="consent-checkbox" type="checkbox"><span>I have read this notice and agree to this processing for the beta.</span></label>
+        </fieldset>
         <div class="auth-error" id="auth-error" role="alert"></div>
         <button class="primary-btn auth-submit" type="submit" id="auth-submit">Sign in</button>
       </form>
@@ -90,7 +101,7 @@
   </dialog>
   <script>
     "use strict";
-    const state = { csrf: "", user: null, conversationId: null, controller: null, editing: false, lastUserText: "", theme: "dark" };
+    const state = { csrf: "", user: null, conversationId: null, controller: null, editing: false, lastUserText: "", theme: "dark", consentVersion: "" };
     const $ = (id) => document.getElementById(id);
     const sidebar = $("sidebar"), overlay = $("overlay"), messages = $("messages"), welcome = $("welcome");
 
@@ -106,6 +117,16 @@
     function showAuth(signup = false) {
       $("invite-field").hidden = !signup;
       $("invite-code").required = signup;
+      $("consent-panel").hidden = !signup;
+      $("consent-checkbox").required = signup;
+      $("consent-checkbox").checked = false;
+      state.consentVersion = "";
+      if (signup) {
+        request("/api/auth/consent-notice").then(notice => {
+          state.consentVersion = notice.version;
+          $("consent-notice-list").replaceChildren(...notice.notice.map(line => makeElement("li", "", line)));
+        }).catch(error => { $("auth-error").textContent = error.message; });
+      }
       $("password").autocomplete = signup ? "new-password" : "current-password";
       $("auth-title").textContent = signup ? "Create your beta account" : "Welcome to Medha";
       $("auth-description").textContent = signup ? "Enter your email, choose a strong password, and use your invitation code." : "Sign in to continue. Beta accounts require an invitation code.";
@@ -349,13 +370,21 @@
       event.preventDefault();
       const signup = !$("invite-field").hidden;
       const body = { email: $("email").value.trim(), password: $("password").value };
-      if (signup) body.invite_code = $("invite-code").value.trim();
+      if (signup) {
+        if (!$("consent-checkbox").checked || !state.consentVersion) {
+          $("auth-error").textContent = "Read and accept the current consent notice before signing up.";
+          return;
+        }
+        body.invite_code = $("invite-code").value.trim();
+        body.consent = true; body.consent_version = state.consentVersion;
+      }
       $("auth-submit").disabled = true; $("auth-error").textContent = "";
       try {
         await refreshCsrf();
         const data = await request(signup ? "/api/auth/signup" : "/api/auth/login", { method: "POST", body: JSON.stringify(body) });
         state.user = data.user; state.csrf = data.csrf_token; $("auth-dialog").close();
         $("user-email").textContent = data.user.email; $("auth-button").textContent = "Sign out";
+        $("delete-conversations").hidden = false; $("delete-account").hidden = false;
         $("brain-label").textContent = "Connected · AI-generated answers";
         await refreshConversations(); setStatus("");
       } catch (error) { $("auth-error").textContent = error.message; }
@@ -366,6 +395,7 @@
       try { await request("/api/auth/logout", { method: "POST", body: "{}" }); } catch {}
       state.user = null; state.csrf = ""; state.conversationId = null; messages.replaceChildren(); welcome.hidden = false;
       $("user-email").textContent = ""; $("auth-button").textContent = "Sign in";
+      $("delete-conversations").hidden = true; $("delete-account").hidden = true;
       $("history-list").replaceChildren(makeElement("div", "empty-history", "Sign in to see conversations")); showAuth(false);
     }
 
@@ -375,6 +405,7 @@
         await refreshCsrf();
         const data = await request("/api/me"); state.user = data.user; state.csrf = data.csrf_token || state.csrf;
         $("user-email").textContent = state.user.email; $("auth-button").textContent = "Sign out";
+        $("delete-conversations").hidden = false; $("delete-account").hidden = false;
         $("brain-label").textContent = "Connected · AI-generated answers"; await refreshConversations();
       } catch { $("brain-label").textContent = "Sign in to start a chat"; showAuth(false); }
     }
@@ -393,6 +424,16 @@
     $("close-menu").addEventListener("click", closeMenu); overlay.addEventListener("click", closeMenu);
     $("suggestions").addEventListener("click", event => { const button = event.target.closest("button[data-prompt]"); if (button) { $("message-input").value = button.dataset.prompt; sendMessage(button.dataset.prompt); } });
     $("export-button").addEventListener("click", async () => { try { const response = await fetch("/api/export", { credentials: "same-origin" }); if (!response.ok) throw new Error("Could not export data."); const blob = await response.blob(), url = URL.createObjectURL(blob), link = makeElement("a", ""); link.href = url; link.download = "medha-export.json"; link.click(); URL.revokeObjectURL(url); } catch (error) { setStatus(error.message, true); } });
+    $("delete-conversations").addEventListener("click", async () => {
+      if (!confirm("Delete all of your conversations? This cannot be undone.")) return;
+      try { await request("/api/conversations", { method: "DELETE", body: "{}" }); newChat(); await refreshConversations(); setStatus("All conversations deleted."); }
+      catch (error) { setStatus(error.message, true); }
+    });
+    $("delete-account").addEventListener("click", async () => {
+      if (!confirm("Delete your Medha account and stored data? This cannot be undone.")) return;
+      try { await request("/api/account", { method: "DELETE", body: "{}" }); signOut(); setStatus("Your account was deleted."); }
+      catch (error) { setStatus(error.message, true); }
+    });
     $("message-input").addEventListener("keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); $("composer").requestSubmit(); } });
     boot();
   </script>

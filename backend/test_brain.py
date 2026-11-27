@@ -92,6 +92,12 @@ class BrainPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "MEDHA_BRAIN_MODEL"):
             Settings(brain_provider="openai_compat").validate()
 
+    def test_log_retention_setting_defaults_to_thirty_days_and_has_a_safe_range(self):
+        self.assertEqual(Settings().log_retention_days, 30)
+        Settings(log_retention_days=365).validate()
+        with self.assertRaisesRegex(ValueError, "MEDHA_LOG_RETENTION_DAYS"):
+            Settings(log_retention_days=0).validate()
+
     def test_history_budget_keeps_system_and_latest_user(self):
         history = [
             {"role": "system", "content": "system"},

@@ -208,6 +208,7 @@ def create_app(
         # Initialize the DB and warm the operator-selected brain before accepting traffic.
         configured.validate()
         auth.initialize(configured.bootstrap_invite_code)
+        db.prune_events(configured.log_retention_days)
         selected_brain.warmup()
         yield
 

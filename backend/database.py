@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -100,6 +101,16 @@ class Database:
                 "INSERT INTO invite_codes(code_hash, max_uses, expires_at, created_by) VALUES (?, ?, ?, ?)",
                 (code_hash, max_uses, expires_at, created_by),
             )
+
+    def prune_events(self, retention_days: int, now: float | None = None) -> int:
+        """Delete only metadata events older than the configured retention period."""
+        if retention_days < 1:
+            raise ValueError("Event retention must be at least one day.")
+        current = time.time() if now is None else now
+        cutoff = current - retention_days * 24 * 60 * 60
+        with self.transaction() as connection:
+            result = connection.execute("DELETE FROM events WHERE created_at < ?", (cutoff,))
+        return result.rowcount
 
 
 def token_digest(token: str) -> str:

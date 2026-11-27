@@ -70,11 +70,18 @@ class AuthRepository:
                         "INSERT INTO invite_codes(code_hash, max_uses) VALUES (?, 1)", (digest,)
                     )
 
-    def signup(self, email: str, password: str, invite_code: str, now: float | None = None) -> tuple[dict[str, str], str, str]:
+    def signup(
+        self,
+        email: str,
+        password: str,
+        invite_code: str,
+        consent_version: str,
+        now: float | None = None,
+    ) -> tuple[dict[str, str], str, str]:
         normalized_email = email.strip().lower()
         if len(password) < MIN_PASSWORD_LENGTH:
             raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
-        if not normalized_email or not invite_code.strip():
+        if not normalized_email or not invite_code.strip() or not consent_version.strip():
             raise AuthError("Signup details are invalid.")
         salt, password_hash = hash_password(password)
         current = time.time() if now is None else now
@@ -104,6 +111,11 @@ class AuthRepository:
                 raise AuthError("Signup details are invalid.") from exc
             connection.execute(
                 "UPDATE invite_codes SET used_count=used_count+1 WHERE code_hash=?", (invite_hash,)
+            )
+            # Consent and account creation share a transaction so no account can exist without its notice record.
+            connection.execute(
+                "INSERT INTO consents(id, user_id, notice_version) VALUES (?, ?, ?)",
+                (str(uuid.uuid4()), user_id, consent_version),
             )
             connection.execute(
                 "INSERT INTO sessions(session_hash, user_id, csrf_hash, created_at, expires_at) "

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from backend.auth_routes import CSRF_COOKIE, SESSION_COOKIE
 from backend.config import Settings
-from backend.database import Database
+from backend.database import Database, token_digest
 from backend.main import create_app
 from backend.medha_brain import GenerationParams, StubBrain
 from websearch.answer import SearchAnswer
@@ -110,7 +110,8 @@ class ChatApiTests(unittest.TestCase):
         self.csrf = csrf["json"]["csrf_token"]
         signup = self.client.sync_request(
             "POST", "/api/auth/signup",
-            {"email": "student@example.edu", "password": "a sufficiently long password", "invite_code": "invite-one"},
+            {"email": "student@example.edu", "password": "a sufficiently long password", "invite_code": "invite-one",
+             "consent": True, "consent_version": "2026-11-27-v1"},
             {"X-CSRF-Token": self.csrf},
         )
         self.assertEqual(signup["status"], 200)
@@ -129,6 +130,42 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(me["status"], 200)
         self.assertEqual(me["json"]["user"]["email"], "student@example.edu")
 
+    def test_signup_requires_explicit_current_consent_and_records_it(self):
+        notice = self.client.sync_request("GET", "/api/auth/consent-notice")["json"]
+        self.assertEqual(notice["version"], "2026-11-27-v1")
+        self.assertTrue(notice["notice"])
+        self.database.create_invite_code("invite-consent")
+        applicant = ASGIClient(self.app)
+        csrf = applicant.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
+        base = {"email": "consent@example.edu", "password": "a sufficiently long password", "invite_code": "invite-consent"}
+        missing = applicant.sync_request(
+            "POST", "/api/auth/signup", {**base, "consent_version": notice["version"]},
+            {"X-CSRF-Token": csrf},
+        )
+        stale = applicant.sync_request(
+            "POST", "/api/auth/signup", {**base, "consent": True, "consent_version": "old-version"},
+            {"X-CSRF-Token": csrf},
+        )
+        self.assertEqual(missing["status"], 400)
+        self.assertEqual(stale["status"], 400)
+        with self.database.connection() as connection:
+            used = connection.execute(
+                "SELECT used_count FROM invite_codes WHERE code_hash=?", (token_digest("invite-consent"),)
+            ).fetchone()[0]
+            count = connection.execute("SELECT COUNT(*) FROM users WHERE email='consent@example.edu'").fetchone()[0]
+        self.assertEqual(used, 0)
+        self.assertEqual(count, 0)
+        accepted = applicant.sync_request(
+            "POST", "/api/auth/signup", {**base, "consent": True, "consent_version": notice["version"]},
+            {"X-CSRF-Token": csrf},
+        )
+        self.assertEqual(accepted["status"], 200)
+        with self.database.connection() as connection:
+            stored = connection.execute(
+                "SELECT notice_version FROM consents WHERE user_id=?", (accepted["json"]["user"]["id"],)
+            ).fetchone()[0]
+        self.assertEqual(stored, notice["version"])
+
     def test_root_serves_real_client_with_safe_text_rendering(self):
         response = self.client.sync_request("GET", "/")
         page = response["body"].decode("utf-8")
@@ -137,6 +174,9 @@ class ChatApiTests(unittest.TestCase):
         self.assertIn("Web search", page)
         self.assertIn("Web search mode", page)
         self.assertIn("Coming soon", page)
+        self.assertIn("consent-panel", page)
+        self.assertIn("/api/auth/consent-notice", page)
+        self.assertIn("Delete all my conversations", page)
         self.assertNotIn("innerHTML", page)
         self.assertIn("noopener noreferrer", page)
 
@@ -189,11 +229,16 @@ class ChatApiTests(unittest.TestCase):
         other = ASGIClient(self.app)
         csrf = other.sync_request("GET", "/api/auth/csrf")["json"]["csrf_token"]
         other_signup = other.sync_request("POST", "/api/auth/signup", {
-            "email": "other@example.edu", "password": "another sufficiently long password", "invite_code": "invite-two"
+            "email": "other@example.edu", "password": "another sufficiently long password", "invite_code": "invite-two",
+            "consent": True, "consent_version": "2026-11-27-v1",
         }, {"X-CSRF-Token": csrf})
         self.assertEqual(other_signup["status"], 200)
         hidden = other.sync_request("GET", f"/api/conversations/{own['id']}")
         self.assertEqual(hidden["status"], 404)
+
+        deleted_chats = self._mutation("DELETE", "/api/conversations")
+        self.assertEqual(deleted_chats["json"]["ok"], True)
+        self.assertEqual(self.client.sync_request("GET", "/api/conversations")["json"], [])
 
         deleted = self._mutation("DELETE", "/api/account")
         self.assertEqual(deleted["status"], 204)

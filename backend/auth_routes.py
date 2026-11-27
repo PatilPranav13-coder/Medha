@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from backend.auth import AuthError, AuthRepository
 from backend.config import Settings
 from backend.database import compare_digest, token_digest
+from backend.privacy import CONSENT_NOTICE
 
 SESSION_COOKIE = "medha_session"
 CSRF_COOKIE = "medha_csrf"
@@ -19,6 +20,8 @@ class SignupBody(BaseModel):
     email: str = Field(min_length=3, max_length=254, pattern=EMAIL_PATTERN)
     password: str = Field(min_length=10, max_length=128)
     invite_code: str = Field(min_length=1, max_length=256)
+    consent: bool = False
+    consent_version: str = Field(min_length=1, max_length=64)
 
 
 class LoginBody(BaseModel):
@@ -66,6 +69,12 @@ def _set_session_cookies(response: Response, token: str, csrf: str, settings: Se
 def create_auth_router(settings: Settings, repository: AuthRepository) -> APIRouter:
     router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+    @router.get("/consent-notice")
+    def consent_notice() -> dict[str, object]:
+        contact = settings.grievance_email or "the beta operator"
+        notice = [*CONSENT_NOTICE, f"For privacy questions, contact {contact}."]
+        return {"version": settings.consent_notice_version, "notice": notice}
+
     @router.get("/csrf")
     def get_csrf(request: Request, response: Response) -> dict[str, str]:
         _, session = _session_from_request(request, repository)
@@ -93,8 +102,12 @@ def create_auth_router(settings: Settings, repository: AuthRepository) -> APIRou
         _check_csrf(request, session)
         if not settings.signups_enabled or settings.maintenance or settings.read_only:
             raise HTTPException(status_code=503, detail="Signup is currently unavailable.")
+        if not body.consent or body.consent_version != settings.consent_notice_version:
+            raise HTTPException(status_code=400, detail="Review and accept the current consent notice to create an account.")
         try:
-            user, token, csrf = repository.signup(body.email, body.password, body.invite_code)
+            user, token, csrf = repository.signup(
+                body.email, body.password, body.invite_code, body.consent_version,
+            )
         except AuthError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         _set_session_cookies(response, token, csrf, settings)

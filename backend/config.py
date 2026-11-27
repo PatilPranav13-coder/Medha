@@ -4,6 +4,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from backend.privacy import NOTICE_VERSION
+
 
 def _integer(name: str, default: int) -> int:
     try:
@@ -60,6 +62,9 @@ class Settings:
     max_conversation_messages: int = 200
     chat_ip_rate_per_minute: int = 120
     chat_user_rate_per_minute: int = 40
+    log_retention_days: int = 30
+    consent_notice_version: str = NOTICE_VERSION
+    grievance_email: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -95,6 +100,9 @@ class Settings:
             max_conversation_messages=_integer("MEDHA_MAX_CONVERSATION_MESSAGES", 200),
             chat_ip_rate_per_minute=_integer("MEDHA_CHAT_IP_RATE_PER_MINUTE", 120),
             chat_user_rate_per_minute=_integer("MEDHA_CHAT_USER_RATE_PER_MINUTE", 40),
+            log_retention_days=_integer("MEDHA_LOG_RETENTION_DAYS", 30),
+            consent_notice_version=os.getenv("MEDHA_CONSENT_NOTICE_VERSION", NOTICE_VERSION).strip(),
+            grievance_email=os.getenv("GRIEVANCE_EMAIL", "").strip() or None,
         )
 
     def validate(self) -> None:
@@ -118,5 +126,9 @@ class Settings:
             raise ValueError("Request and rate limits must be positive.")
         if self.max_conversation_messages < 2:
             raise ValueError("Conversation limit must allow at least one user and assistant message.")
+        if not 1 <= self.log_retention_days <= 3650:
+            raise ValueError("MEDHA_LOG_RETENTION_DAYS must be between 1 and 3650.")
+        if not self.consent_notice_version or len(self.consent_notice_version) > 64:
+            raise ValueError("MEDHA_CONSENT_NOTICE_VERSION must be a non-empty version label of at most 64 characters.")
         if not self.database_path.strip():
             raise ValueError("MEDHA_DATABASE_PATH cannot be empty.")
