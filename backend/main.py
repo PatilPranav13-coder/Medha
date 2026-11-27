@@ -7,6 +7,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from backend.config import Settings
+from backend.auth import AuthRepository
+from backend.auth_routes import create_auth_router
+from backend.database import Database
 from backend.medha_brain import build_brain
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -16,12 +19,16 @@ app = FastAPI(title="Medha API")
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 settings = Settings.from_env()
 brain = build_brain(settings)
+database = Database(settings.database_path)
+auth_repository = AuthRepository(database, settings.max_users, settings.session_ttl_seconds)
+app.include_router(create_auth_router(settings, auth_repository))
 
 
 @app.on_event("startup")
 def validate_brain_configuration() -> None:
     # Failing at startup is clearer than accepting beta traffic with an unset model.
     settings.validate()
+    auth_repository.initialize(settings.bootstrap_invite_code)
     brain.warmup()
 
 

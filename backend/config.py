@@ -19,6 +19,18 @@ def _floating(name: str, default: float) -> float:
         raise ValueError(f"{name} must be a number.") from exc
 
 
+def _boolean(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    normalized = raw.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean value.")
+
+
 @dataclass(frozen=True)
 class Settings:
     brain_provider: str = "stub"
@@ -35,6 +47,14 @@ class Settings:
     temperature: float = 0.7
     top_p: float = 0.9
     experimental_checkpoint: str = "medha_local_llm/checkpoints/medha.pt"
+    database_path: str = "instance/medha.sqlite3"
+    max_users: int = 100
+    signups_enabled: bool = True
+    maintenance: bool = False
+    read_only: bool = False
+    cookie_secure: bool = True
+    session_ttl_seconds: int = 604800
+    bootstrap_invite_code: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -57,6 +77,14 @@ class Settings:
             experimental_checkpoint=os.getenv(
                 "MEDHA_EXPERIMENTAL_CHECKPOINT", "medha_local_llm/checkpoints/medha.pt"
             ),
+            database_path=os.getenv("MEDHA_DATABASE_PATH", "instance/medha.sqlite3"),
+            max_users=_integer("MEDHA_MAX_USERS", 100),
+            signups_enabled=_boolean("MEDHA_SIGNUPS_ENABLED", True),
+            maintenance=_boolean("MEDHA_MAINTENANCE", False),
+            read_only=_boolean("MEDHA_READ_ONLY", False),
+            cookie_secure=_boolean("MEDHA_COOKIE_SECURE", True),
+            session_ttl_seconds=_integer("MEDHA_SESSION_TTL_SECONDS", 604800),
+            bootstrap_invite_code=os.getenv("MEDHA_BOOTSTRAP_INVITE_CODE") or None,
         )
 
     def validate(self) -> None:
@@ -74,3 +102,7 @@ class Settings:
             raise ValueError("Queue, output, and context limits must be non-negative and useful.")
         if not 0 < self.top_p <= 1 or self.temperature <= 0:
             raise ValueError("Sampling values must be positive and top_p cannot exceed one.")
+        if self.max_users < 1 or self.session_ttl_seconds < 60:
+            raise ValueError("User capacity must be positive and sessions must last at least one minute.")
+        if not self.database_path.strip():
+            raise ValueError("MEDHA_DATABASE_PATH cannot be empty.")
