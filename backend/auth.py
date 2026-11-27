@@ -189,13 +189,3 @@ class AuthRepository:
                 (current, token_digest(token)),
             )
 
-    def set_csrf(self, token: str, csrf: str, now: float | None = None) -> None:
-        current = time.time() if now is None else now
-        with self.database.transaction() as connection:
-            result = connection.execute(
-                "UPDATE sessions SET csrf_hash=? WHERE session_hash=? AND revoked_at IS NULL AND expires_at>?",
-                (token_digest(csrf), token_digest(token), current),
-            )
-            if result.rowcount != 1:
-                raise AuthError("Session is no longer active.")
-

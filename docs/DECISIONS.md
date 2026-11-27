@@ -11,3 +11,7 @@ The product decision is a local open-weights model served through an OpenAI-comp
 ## 2026-11-27 — Use same-origin APIs and one app worker
 
 The Medha OS page and API are served by FastAPI from one origin. This avoids a broad CORS policy and lets cookie plus CSRF checks protect mutations. SQLite and in-memory rate/generation controls require a single worker at launch.
+
+## 2026-11-27 — Remove the placeholder frontend after parity
+
+The root Medha OS client now uses the production auth and chat APIs, and the ASGI suite verifies that `/` serves it and exercises signup, streamed chat, conversation history, edit/regenerate, feedback, export, and account deletion. The older standalone `frontend/` echo demo was removed after that parity check so there is one chat client to maintain.

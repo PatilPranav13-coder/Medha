@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -69,10 +68,14 @@ def create_auth_router(settings: Settings, repository: AuthRepository) -> APIRou
 
     @router.get("/csrf")
     def get_csrf(request: Request, response: Response) -> dict[str, str]:
-        raw_session, session = _session_from_request(request, repository)
+        _, session = _session_from_request(request, repository)
+        existing = request.cookies.get(CSRF_COOKIE, "")
+        if session is not None:
+            # A safe GET may return the existing token, but must not rotate server state.
+            if not existing or not compare_digest(token_digest(existing), session["csrf_hash"]):
+                raise HTTPException(status_code=403, detail="Refresh sign-in to restore CSRF protection.")
+            return {"csrf_token": existing}
         csrf = secrets.token_urlsafe(32)
-        if raw_session and session:
-            repository.set_csrf(raw_session, csrf)
         response.set_cookie(
             CSRF_COOKIE,
             csrf,
