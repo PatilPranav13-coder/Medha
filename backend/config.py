@@ -44,6 +44,7 @@ class Settings:
     generation_queue_timeout_seconds: float = 45.0
     max_output_tokens: int = 1024
     history_token_budget: int = 8192
+    search_synthesis_enabled: bool = False
     temperature: float = 0.7
     top_p: float = 0.9
     experimental_checkpoint: str = "medha_local_llm/checkpoints/medha.pt"
@@ -55,6 +56,10 @@ class Settings:
     cookie_secure: bool = True
     session_ttl_seconds: int = 604800
     bootstrap_invite_code: str | None = None
+    max_request_bytes: int = 65536
+    max_conversation_messages: int = 200
+    chat_ip_rate_per_minute: int = 120
+    chat_user_rate_per_minute: int = 40
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -72,6 +77,7 @@ class Settings:
             generation_queue_timeout_seconds=_floating("MEDHA_GENERATION_QUEUE_TIMEOUT_SECONDS", 45.0),
             max_output_tokens=_integer("MEDHA_MAX_OUTPUT_TOKENS", 1024),
             history_token_budget=_integer("MEDHA_HISTORY_TOKEN_BUDGET", 8192),
+            search_synthesis_enabled=_boolean("MEDHA_BRAIN_SEARCH_SYNTHESIS", False),
             temperature=_floating("MEDHA_TEMPERATURE", 0.7),
             top_p=_floating("MEDHA_TOP_P", 0.9),
             experimental_checkpoint=os.getenv(
@@ -85,6 +91,10 @@ class Settings:
             cookie_secure=_boolean("MEDHA_COOKIE_SECURE", True),
             session_ttl_seconds=_integer("MEDHA_SESSION_TTL_SECONDS", 604800),
             bootstrap_invite_code=os.getenv("MEDHA_BOOTSTRAP_INVITE_CODE") or None,
+            max_request_bytes=_integer("MEDHA_MAX_REQUEST_BYTES", 65536),
+            max_conversation_messages=_integer("MEDHA_MAX_CONVERSATION_MESSAGES", 200),
+            chat_ip_rate_per_minute=_integer("MEDHA_CHAT_IP_RATE_PER_MINUTE", 120),
+            chat_user_rate_per_minute=_integer("MEDHA_CHAT_USER_RATE_PER_MINUTE", 40),
         )
 
     def validate(self) -> None:
@@ -104,5 +114,9 @@ class Settings:
             raise ValueError("Sampling values must be positive and top_p cannot exceed one.")
         if self.max_users < 1 or self.session_ttl_seconds < 60:
             raise ValueError("User capacity must be positive and sessions must last at least one minute.")
+        if min(self.max_request_bytes, self.chat_ip_rate_per_minute, self.chat_user_rate_per_minute) < 1:
+            raise ValueError("Request and rate limits must be positive.")
+        if self.max_conversation_messages < 2:
+            raise ValueError("Conversation limit must allow at least one user and assistant message.")
         if not self.database_path.strip():
             raise ValueError("MEDHA_DATABASE_PATH cannot be empty.")

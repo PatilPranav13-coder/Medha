@@ -15,6 +15,8 @@
     dialog{width:min(430px,calc(100% - 28px));padding:0;border:1px solid var(--border2);border-radius:16px;background:var(--bg2);color:var(--text);box-shadow:var(--panel-shadow)}dialog::backdrop{background:#05060acc;backdrop-filter:blur(4px)}.auth-box{padding:25px}.auth-box h2{font:24px Georgia,serif;margin:0 0 5px}.auth-box p{color:var(--muted);font-size:12px;line-height:1.55;margin:0 0 18px}.field{display:grid;gap:6px;margin:11px 0}.field label{font-size:12px;color:var(--muted)}.field input{width:100%;border:1px solid var(--border2);border-radius:9px;background:var(--bg);color:var(--text);padding:10px}.auth-submit{margin-top:9px}.auth-error{min-height:18px;color:var(--red);font-size:12px;margin:8px 0}.auth-switch{border:0;background:transparent;color:var(--accent);cursor:pointer;padding:10px 0 0;font-size:12px}.empty-history{padding:10px;color:var(--quiet);font-size:12px}.mobile-close{display:none}
     @media(max-width:760px){.app{grid-template-columns:1fr}aside{position:fixed;inset:0 auto 0 0;width:min(var(--sidebar),85vw);transform:translateX(-105%);box-shadow:var(--panel-shadow)}aside.mobile-open{transform:translateX(0)}.overlay.visible{display:block;position:fixed;inset:0;background:#0008;z-index:2}.mobile-close{display:grid;margin-left:auto}.topbar{height:56px;padding:0 13px}.chat-area{padding:20px 14px 15px}.composer-wrap{padding:6px 12px 12px}.suggestions{grid-template-columns:1fr}.welcome{padding:2vh 4px 5vh}.message{grid-template-columns:27px minmax(0,1fr);gap:8px}.avatar{width:27px;height:27px}.top-actions{gap:3px}.user-chip{max-width:100px}.message-actions{opacity:1}}
     @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+    .search-mode{max-width:112px;min-height:38px;border:1px solid var(--border2);border-radius:9px;background:var(--bg3);color:var(--text);padding:0 7px;font-size:11px}
+    .source-snippet{color:var(--muted);font-size:11px;line-height:1.45;margin:2px 0 8px 9px}
   </style>
 </head>
 <body>
@@ -25,7 +27,7 @@
       <div class="history"><div class="section-label">Recent chats</div><div class="history-list" id="history-list"><div class="empty-history">Sign in to see conversations</div></div></div>
       <nav class="nav" aria-label="Features">
         <button class="nav-item active" type="button" aria-current="page">◌ <span>Chat</span></button>
-        <button class="nav-item" type="button" disabled aria-label="Web search coming soon">⌕ <span>Web search</span><span class="soon">Coming soon</span></button>
+        <button class="nav-item" id="web-search-button" type="button" aria-label="Set web search to always">⌕ <span>Web search</span><span class="soon">Available</span></button>
         <button class="nav-item" type="button" disabled aria-label="Memory and files coming soon">▧ <span>Memory &amp; files</span><span class="soon">Coming soon</span></button>
       </nav>
       <div class="account"><span class="status-dot" aria-hidden="true"></span><span id="brain-label">Connecting to Medha…</span></div>
@@ -62,10 +64,11 @@
         <div class="composer-inner">
           <form class="composer" id="composer">
             <textarea id="message-input" rows="1" aria-label="Message Medha" placeholder="Message Medha…" required></textarea>
+            <select class="search-mode" id="search-mode" aria-label="Web search mode"><option value="auto">Search: Auto</option><option value="always">Search web</option><option value="off">No search</option></select>
             <button class="stop-btn" id="stop-button" type="button" hidden>Stop</button>
             <button class="send-btn" id="send-button" type="submit" aria-label="Send message">↑</button>
           </form>
-          <div class="disclaimer">AI-generated and may be wrong. Verify important information. Web search is coming soon.</div>
+          <div class="disclaimer">AI-generated and may be wrong. Verify important information. Search may not find every source.</div>
           <div class="statusline" id="statusline" role="status"></div>
         </div>
       </div>
@@ -228,6 +231,7 @@
         try { const url = new URL(source.url); if (!["http:", "https:"].includes(url.protocol)) continue; row.href = url.href; }
         catch { continue; }
         row.target = "_blank"; row.rel = "noopener noreferrer"; box.append(row);
+        if (source.snippet) box.append(makeElement("div", "source-snippet", source.snippet));
       }
       main.append(box);
     }
@@ -269,7 +273,7 @@
         for (const item of data.messages) {
           const view = appendMessage(item.role, item.content, item.id);
           if (item.role === "user") state.lastUserText = item.content;
-          else addAssistantActions(view, item.id);
+          else { appendSources(view.main, item.sources); addAssistantActions(view, item.id); }
         }
         await refreshConversations(); closeMenu(); setStatus("");
       } catch (error) { setStatus(error.message, true); }
@@ -325,7 +329,7 @@
         const response = await fetch("/api/chat", {
           method: "POST", credentials: "same-origin", signal: state.controller.signal,
           headers: { "Content-Type": "application/json", "X-CSRF-Token": state.csrf },
-          body: JSON.stringify({ message: action === "regenerate" ? null : clean, conversation_id: state.conversationId, action })
+          body: JSON.stringify({ message: action === "regenerate" ? null : clean, conversation_id: state.conversationId, action, search_mode: $("search-mode").value })
         });
         if (!response.ok) { let detail = "Medha could not start this response."; try { detail = (await response.json()).detail || detail; } catch {} throw new Error(detail); }
         const result = await consumeStream(response, view.body, view);
@@ -379,6 +383,7 @@
 
     $("composer").addEventListener("submit", event => { event.preventDefault(); const value = $("message-input").value; sendMessage(value, state.editing ? "edit" : "send"); });
     $("new-chat").addEventListener("click", newChat);
+    $("web-search-button").addEventListener("click", () => { $("search-mode").value = "always"; $("search-mode").focus(); setStatus("Web search will run for the next message."); });
     $("stop-button").addEventListener("click", () => state.controller?.abort());
     $("auth-button").addEventListener("click", () => state.user ? signOut() : showAuth(false));
     $("auth-form").addEventListener("submit", authenticate);

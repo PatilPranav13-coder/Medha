@@ -1,0 +1,1 @@
+ALTER TABLE messages ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]';

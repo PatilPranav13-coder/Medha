@@ -116,6 +116,7 @@ class OpenAICompatBrain:
         timeout: float = 45.0,
         retries: int = 2,
         max_output_tokens: int = 1024,
+        supports_search_synthesis: bool = False,
         opener: Callable[..., object] = urllib.request.urlopen,
         sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -127,6 +128,8 @@ class OpenAICompatBrain:
         self.timeout = timeout
         self.retries = retries
         self.max_output_tokens = max_output_tokens
+        # Synthesis is opt-in because a compatible endpoint is not automatically capable enough.
+        self.supports_search_synthesis = supports_search_synthesis
         self._opener = opener
         self._sleep = sleeper
 
@@ -285,6 +288,7 @@ def build_brain(settings: Settings) -> Brain:
         timeout=settings.brain_timeout_seconds,
         retries=settings.brain_retries,
         max_output_tokens=settings.max_output_tokens,
+        supports_search_synthesis=settings.search_synthesis_enabled,
     )
 
 

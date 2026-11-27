@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import threading
 import uuid
 from contextlib import asynccontextmanager
 from collections.abc import Iterator
@@ -13,6 +14,7 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from backend.auth import AuthRepository
 from backend.auth_routes import CSRF_COOKIE, SESSION_COOKIE, _check_csrf, create_auth_router
@@ -27,6 +29,9 @@ from backend.medha_brain import (
     build_brain,
     prepare_messages,
 )
+from safety import RateLimitExceeded, TokenBucketLimiter, classify_message, crisis_response, refusal_response
+from websearch.answer import SearchAnswer, SearchMode
+from websearch.service import SearchService
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = PROJECT_ROOT / "index.html"
@@ -71,6 +76,7 @@ class ChatBody(BaseModel):
     conversation_id: str | None = Field(default=None, max_length=64)
     action: Literal["send", "regenerate", "edit"] = "send"
     max_tokens: int | None = Field(default=None, ge=1, le=8192)
+    search_mode: SearchMode = "auto"
 
 
 class FeedbackBody(BaseModel):
@@ -117,16 +123,80 @@ def _next_chunk(iterator: Iterator[str]) -> str | object:
         return _END
 
 
+class RequestSizeLimitMiddleware:
+    """Bound request bodies before FastAPI/Pydantic allocate parsed fields."""
+
+    def __init__(self, app: ASGIApp, limit: int) -> None:
+        self.app = app
+        self.limit = limit
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
+        try:
+            declared_size = int(headers.get(b"content-length", b"0"))
+        except ValueError:
+            declared_size = self.limit + 1
+        if declared_size > self.limit:
+            await self._reject(send)
+            return
+        messages: list[Message] = []
+        total = 0
+        while True:
+            message = await receive()
+            if message.get("type") == "http.disconnect":
+                return
+            messages.append(message)
+            total += len(message.get("body", b""))
+            if total > self.limit:
+                await self._reject(send)
+                return
+            if not message.get("more_body", False):
+                break
+        position = 0
+
+        async def replay_receive() -> Message:
+            nonlocal position
+            if position < len(messages):
+                message = messages[position]
+                position += 1
+                return message
+            return await receive()
+
+        await self.app(scope, replay_receive, send)
+
+    @staticmethod
+    async def _reject(send: Send) -> None:
+        body = b'{"detail":"Request body is too large."}'
+        await send({"type": "http.response.start", "status": 413,
+                    "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]})
+        await send({"type": "http.response.body", "body": body, "more_body": False})
+
+
 def create_app(
     settings: Settings | None = None,
     brain: Brain | None = None,
     database: Database | None = None,
+    search_service: SearchService | None = None,
 ) -> FastAPI:
     configured = settings or Settings.from_env()
     selected_brain = brain or build_brain(configured)
     db = database or Database(configured.database_path)
     auth = AuthRepository(db, configured.max_users, configured.session_ttl_seconds)
     chats = ChatRepository(db)
+    synthesis_capable = bool(getattr(selected_brain, "supports_search_synthesis", False))
+    search = search_service or SearchService(
+        synthesis_generate=(
+            lambda messages: "".join(selected_brain.generate_stream(messages, GenerationParams(
+                max_tokens=min(700, configured.max_output_tokens), temperature=0.2, top_p=0.9,
+            )))
+        ) if synthesis_capable else None,
+        synthesis_capable=synthesis_capable,
+    )
+    ip_limiter = TokenBucketLimiter(configured.chat_ip_rate_per_minute, configured.chat_ip_rate_per_minute / 60)
+    user_limiter = TokenBucketLimiter(configured.chat_user_rate_per_minute, configured.chat_user_rate_per_minute / 60)
     generation_gate = GenerationGate(
         max_active=configured.max_concurrent_generations,
         max_queued=configured.max_queued_generations,
@@ -142,12 +212,14 @@ def create_app(
         yield
 
     app = FastAPI(title="Medha API", lifespan=lifespan)
+    app.add_middleware(RequestSizeLimitMiddleware, limit=configured.max_request_bytes)
     app.state.settings = configured
     app.state.brain = selected_brain
     app.state.database = db
     app.state.auth_repository = auth
     app.state.chat_repository = chats
     app.state.generation_gate = generation_gate
+    app.state.search_service = search
     app.include_router(create_auth_router(configured, auth))
 
     @app.get("/", include_in_schema=False)
@@ -224,6 +296,12 @@ def create_app(
         _require_csrf(request, session)
         _require_writable(configured)
         user_id = session["user"]["id"]
+        try:
+            ip_limiter.consume(request.client.host if request.client else "unknown")
+            user_limiter.consume(user_id)
+        except RateLimitExceeded as exc:
+            raise HTTPException(status_code=429, detail="Chat request rate limit reached.",
+                                headers={"Retry-After": str(exc.retry_after)}) from exc
         if body.action in {"send", "edit"} and not (body.message or "").strip():
             raise HTTPException(status_code=422, detail="A message is required.")
 
@@ -236,6 +314,8 @@ def create_app(
                 conversation = chats.get_conversation(user_id, conversation_id)
                 if conversation is None:
                     raise HTTPException(status_code=404, detail="Conversation not found.")
+                if chats.count_messages(user_id, conversation_id) + 2 > configured.max_conversation_messages:
+                    raise HTTPException(status_code=413, detail="This conversation reached its message limit. Start a new chat.")
                 if not conversation["messages"] and conversation["title"] == "New chat":
                     chats.rename_conversation(user_id, conversation_id, _title_from_message(message))
             try:
@@ -255,28 +335,76 @@ def create_app(
         if conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found.")
         model_messages = prepare_messages(conversation["messages"], configured.history_token_budget)
+        latest_user_text = next((item["content"] for item in reversed(conversation["messages"])
+                                 if item["role"] == "user"), "")
+        safety_category = classify_message(latest_user_text)
         params = GenerationParams(
             max_tokens=min(body.max_tokens or configured.max_output_tokens, configured.max_output_tokens),
             temperature=configured.temperature,
             top_p=configured.top_p,
         )
-        try:
-            await asyncio.to_thread(generation_gate.acquire)
-        except GenerationCapacityError as exc:
-            raise HTTPException(
-                status_code=503,
-                detail="Medha is busy. Please retry shortly.",
-                headers={"Retry-After": "5"},
-            ) from exc
+        fixed_response = crisis_response() if safety_category == "crisis" else (
+            refusal_response() if safety_category == "severe_harm" else None
+        )
+        if fixed_response is None:
+            try:
+                await asyncio.to_thread(generation_gate.acquire)
+            except GenerationCapacityError as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Medha is busy. Please retry shortly.",
+                    headers={"Retry-After": "5"},
+                ) from exc
 
         request_id = str(uuid.uuid4())
 
         async def stream():
             generated: list[str] = []
-            iterator = selected_brain.generate_stream(model_messages, params)
+            iterator: Iterator[str] | None = None
             persisted_id: str | None = None
             disconnected = False
+            sources: list[dict[str, object]] = []
             try:
+                if fixed_response is not None:
+                    iterator = iter([fixed_response])
+                else:
+                    search_cancel = threading.Event()
+                    if isinstance(search, SearchService):
+                        search_task = asyncio.create_task(asyncio.to_thread(
+                            search.search, latest_user_text, body.search_mode, search_cancel,
+                        ))
+                    else:
+                        search_task = asyncio.create_task(asyncio.to_thread(
+                            search.search, latest_user_text, body.search_mode,
+                        ))
+                    search_deadline = min(float(getattr(search, "deadline_seconds", 12.0)), 12.0)
+                    deadline_at = asyncio.get_running_loop().time() + search_deadline
+                    try:
+                        while True:
+                            if search_task.done():
+                                search_result = await search_task
+                                break
+                            remaining = deadline_at - asyncio.get_running_loop().time()
+                            if remaining <= 0:
+                                raise asyncio.TimeoutError
+                            if await request.is_disconnected():
+                                disconnected = True
+                                search_cancel.set()
+                                search_task.cancel()
+                                return
+                            await asyncio.wait({search_task}, timeout=min(0.05, remaining))
+                    except asyncio.TimeoutError:
+                        search_cancel.set()
+                        search_task.cancel()
+                        search_result = SearchAnswer(
+                            "I couldn't verify this with web sources within the search deadline. Please try again shortly.",
+                            [], True, "deadline",
+                        )
+                    sources = search_result.sources
+                    if search_result.searched:
+                        iterator = iter(search_result.answer[i:i + 48] for i in range(0, len(search_result.answer), 48))
+                    else:
+                        iterator = selected_brain.generate_stream(model_messages, params)
                 while True:
                     if await request.is_disconnected():
                         disconnected = True
@@ -289,10 +417,12 @@ def create_app(
                     generated.append(chunk)
                     yield _sse("token", {"text": chunk, "conversation_id": conversation_id})
                 if generated:
-                    persisted_id = chats.append_message(user_id, conversation_id or "", "assistant", "".join(generated))
+                    persisted_id = chats.append_message(
+                        user_id, conversation_id or "", "assistant", "".join(generated), sources=sources,
+                    )
                 if not disconnected:
                     # WP5 supplies search citations; an empty list here is explicitly honest.
-                    yield _sse("sources", [])
+                    yield _sse("sources", sources)
                     yield _sse("done", {"conversation_id": conversation_id, "message_id": persisted_id})
             except Exception:
                 if not disconnected:
@@ -301,16 +431,19 @@ def create_app(
                 # Keep a partial answer in history when the client stops generation.
                 if generated and persisted_id is None:
                     try:
-                        chats.append_message(user_id, conversation_id or "", "assistant", "".join(generated))
+                        chats.append_message(
+                            user_id, conversation_id or "", "assistant", "".join(generated), sources=sources,
+                        )
                     except Exception:
                         pass
-                close = getattr(iterator, "close", None)
+                close = getattr(iterator, "close", None) if iterator is not None else None
                 if callable(close):
                     try:
                         close()
                     except Exception:
                         pass
-                generation_gate.release()
+                if fixed_response is None:
+                    generation_gate.release()
 
         return StreamingResponse(
             stream(),

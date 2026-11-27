@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import time
 import uuid
 from typing import Any
@@ -31,6 +32,16 @@ class ChatRepository:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    @staticmethod
+    def _message(row: sqlite3.Row) -> dict[str, Any]:
+        message = dict(row)
+        try:
+            sources = json.loads(message.pop("sources_json", "[]"))
+        except (TypeError, json.JSONDecodeError):
+            sources = []
+        message["sources"] = sources if isinstance(sources, list) else []
+        return message
+
     def get_conversation(self, user_id: str, conversation_id: str) -> dict[str, Any] | None:
         with self.database.connection() as connection:
             row = connection.execute(
@@ -40,14 +51,25 @@ class ChatRepository:
             if row is None:
                 return None
             messages = connection.execute(
-                "SELECT id, role, content, created_at FROM messages "
+                "SELECT id, role, content, created_at, sources_json FROM messages "
                 "WHERE conversation_id=? ORDER BY created_at, rowid", (conversation_id,),
             ).fetchall()
         result = dict(row)
-        result["messages"] = [dict(message) for message in messages]
+        result["messages"] = [self._message(message) for message in messages]
         return result
 
-    def append_message(self, user_id: str, conversation_id: str, role: str, content: str) -> str:
+    def count_messages(self, user_id: str, conversation_id: str) -> int:
+        with self.database.connection() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS total FROM messages WHERE user_id=? AND conversation_id=?",
+                (user_id, conversation_id),
+            ).fetchone()
+        return int(row["total"])
+
+    def append_message(
+        self, user_id: str, conversation_id: str, role: str, content: str,
+        sources: list[dict[str, object]] | None = None,
+    ) -> str:
         if role not in {"user", "assistant"}:
             raise ValueError("Only user and assistant messages can be stored.")
         identifier, now = str(uuid.uuid4()), time.time()
@@ -58,9 +80,10 @@ class ChatRepository:
             if owner is None:
                 raise KeyError("Conversation does not exist.")
             connection.execute(
-                "INSERT INTO messages(id, conversation_id, user_id, role, content, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (identifier, conversation_id, user_id, role, content, now),
+                "INSERT INTO messages(id, conversation_id, user_id, role, content, created_at, sources_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (identifier, conversation_id, user_id, role, content, now,
+                 json.dumps(sources or [], ensure_ascii=False, separators=(",", ":"))),
             )
             connection.execute(
                 "UPDATE conversations SET updated_at=? WHERE id=? AND user_id=?",
@@ -163,8 +186,8 @@ class ChatRepository:
             result["conversations"] = []
             for conversation in conversations:
                 row = dict(conversation)
-                row["messages"] = [dict(message) for message in connection.execute(
-                    "SELECT id, role, content, created_at FROM messages WHERE conversation_id=? ORDER BY created_at, rowid",
+                row["messages"] = [self._message(message) for message in connection.execute(
+                    "SELECT id, role, content, created_at, sources_json FROM messages WHERE conversation_id=? ORDER BY created_at, rowid",
                     (row["id"],),
                 ).fetchall()]
                 result["conversations"].append(row)

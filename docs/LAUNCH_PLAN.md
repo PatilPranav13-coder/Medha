@@ -23,4 +23,4 @@ Target date: 1 January 2027. The launch is a public beta for students and engine
 - 25 Dec: run and report gates, docs, and staging verification. Stop for owner review.
 - 26–31 Dec: fixes only, then waitlist soft launch and owner go/no-go.
 
-The current work session targets milestone 1 only. No parity or production readiness claim is made until the later gates have actually run.
+Milestone 1 (WP1–WP4) is complete in commit `87bcc62`. The current work session is implementing milestone 2 (WP5–WP7); stop for owner review after that package. No capability-parity or production-readiness claim is made until the later gates have actually run on the selected model and target host.

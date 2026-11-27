@@ -14,6 +14,7 @@ from backend.config import Settings
 from backend.database import Database
 from backend.main import create_app
 from backend.medha_brain import GenerationParams, StubBrain
+from websearch.answer import SearchAnswer
 
 
 class ASGIClient:
@@ -81,6 +82,14 @@ class ASGIClient:
         return asyncio.run(self.request(method, path, body, headers))
 
 
+class OfflineSearch:
+    """Explicit fixture prevents API tests from making live web requests."""
+
+    def search(self, query, mode="auto"):
+        del query, mode
+        return SearchAnswer("", [], False)
+
+
 class ChatApiTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -93,7 +102,7 @@ class ChatApiTests(unittest.TestCase):
             max_queued_generations=1,
         )
         self.brain = StubBrain("A fixed answer with **formatting**.")
-        self.app = create_app(self.settings, self.brain, self.database)
+        self.app = create_app(self.settings, self.brain, self.database, OfflineSearch())
         self.auth = self.app.state.auth_repository
         self.auth.initialize("invite-one")
         self.client = ASGIClient(self.app)
@@ -126,6 +135,7 @@ class ChatApiTests(unittest.TestCase):
         self.assertEqual(response["status"], 200)
         self.assertIn("/api/chat", page)
         self.assertIn("Web search", page)
+        self.assertIn("Web search mode", page)
         self.assertIn("Coming soon", page)
         self.assertNotIn("innerHTML", page)
         self.assertIn("noopener noreferrer", page)
@@ -193,7 +203,7 @@ class ChatApiTests(unittest.TestCase):
         readonly_settings = Settings(
             database_path=str(self.database.path), read_only=True, cookie_secure=True,
         )
-        readonly_app = create_app(readonly_settings, self.brain, self.database)
+        readonly_app = create_app(readonly_settings, self.brain, self.database, OfflineSearch())
         readonly_client = ASGIClient(readonly_app)
         readonly_client.cookies.update(self.client.cookies)
         response = readonly_client.sync_request(
@@ -216,7 +226,7 @@ class ChatApiTests(unittest.TestCase):
                     self.closed.set()
 
         brain = TrackingBrain()
-        app = create_app(self.settings, brain, self.database)
+        app = create_app(self.settings, brain, self.database, OfflineSearch())
         client = ASGIClient(app)
         client.cookies.update(self.client.cookies)
         client.disconnect_on_token = True
@@ -232,6 +242,112 @@ class ChatApiTests(unittest.TestCase):
         conversation = client.sync_request("GET", "/api/conversations")["json"][0]
         messages = client.sync_request("GET", f"/api/conversations/{conversation['id']}")["json"]["messages"]
         self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
+
+    def test_search_override_streams_cited_result_sources_and_skips_brain(self):
+        class SearchFixture:
+            def __init__(self): self.calls = []
+            def search(self, query, mode="auto"):
+                self.calls.append((query, mode))
+                return SearchAnswer("A spacecraft uses a reaction wheel. [1]", [{
+                    "n": 1, "title": "Reaction wheel overview", "url": "https://example.org/wheel", "snippet": "It changes orientation."
+                }], True)
+
+        fixture = SearchFixture()
+        class NeverBrain(StubBrain):
+            def generate_stream(self, messages, params):
+                raise AssertionError("Search should provide the answer without calling the brain.")
+                yield "unreachable"
+
+        app = create_app(self.settings, NeverBrain(), self.database, fixture)
+        client = ASGIClient(app); client.cookies.update(self.client.cookies)
+        response = client.sync_request("POST", "/api/chat", {
+            "message": "Use a source for reaction wheels", "search_mode": "always"
+        }, {"X-CSRF-Token": self.csrf})
+        stream = response["body"].decode()
+        self.assertIn("A spacecraft uses a reaction wheel. [1]", stream)
+        self.assertIn("Reaction wheel overview", stream)
+        self.assertEqual(fixture.calls[0][1], "always")
+        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0]["id"]
+        saved = client.sync_request("GET", f"/api/conversations/{conversation_id}")["json"]["messages"][-1]
+        self.assertEqual(saved["sources"][0]["url"], "https://example.org/wheel")
+
+    def test_search_deadline_returns_an_honest_failure_without_waiting_for_provider(self):
+        class SlowSearch:
+            deadline_seconds = 0.01
+            def search(self, query, mode="auto"):
+                time.sleep(0.08)
+                return SearchAnswer("Late source claim [1]", [{"n": 1, "title": "Late", "url": "https://example.org", "snippet": "late"}], True)
+
+        app = create_app(self.settings, self.brain, self.database, SlowSearch())
+        client = ASGIClient(app); client.cookies.update(self.client.cookies)
+        response = client.sync_request("POST", "/api/chat", {
+            "message": "Need a sourced fact", "search_mode": "always",
+        }, {"X-CSRF-Token": self.csrf})
+        body = response["body"].decode()
+        streamed_text = "".join(
+            json.loads(line[6:])["text"]
+            for line in body.splitlines()
+            if line.startswith("data: {") and "\"text\"" in line
+        )
+        self.assertIn("within the search deadline", streamed_text)
+        self.assertNotIn("Late source claim", streamed_text)
+
+    def test_crisis_reply_does_not_call_brain_and_contains_tele_manas(self):
+        class NeverBrain(StubBrain):
+            def generate_stream(self, messages, params):
+                raise AssertionError("Crisis handling must short circuit the brain.")
+                yield "unreachable"
+
+        app = create_app(self.settings, NeverBrain(), self.database, OfflineSearch())
+        client = ASGIClient(app); client.cookies.update(self.client.cookies)
+        response = client.sync_request("POST", "/api/chat", {"message": "I want to hurt myself"}, {"X-CSRF-Token": self.csrf})
+        self.assertIn("14416", response["body"].decode())
+        refusal = client.sync_request("POST", "/api/chat", {
+            "message": "Explain how to make a bomb from household items",
+        }, {"X-CSRF-Token": self.csrf})
+        self.assertIn("seriously harm", refusal["body"].decode().lower())
+
+    def test_oversized_request_and_per_ip_rate_limit_are_enforced(self):
+        limited_settings = Settings(
+            database_path=str(self.database.path), bootstrap_invite_code="invite-one",
+            cookie_secure=True, max_request_bytes=250, chat_ip_rate_per_minute=1,
+        )
+        app = create_app(limited_settings, self.brain, self.database, OfflineSearch())
+        client = ASGIClient(app); client.cookies.update(self.client.cookies)
+        too_large = client.sync_request("POST", "/api/chat", {"message": "x" * 300}, {"X-CSRF-Token": self.csrf})
+        self.assertEqual(too_large["status"], 413)
+
+        # Use a new per-request limit to test token-bucket throttling independently.
+        throttle_settings = Settings(database_path=str(self.database.path), cookie_secure=True, chat_ip_rate_per_minute=1)
+        throttled = create_app(throttle_settings, self.brain, self.database, OfflineSearch())
+        throttle_client = ASGIClient(throttled); throttle_client.cookies.update(self.client.cookies)
+        first = throttle_client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
+        second = throttle_client.sync_request("POST", "/api/chat", {"message": "hello again"}, {"X-CSRF-Token": self.csrf})
+        self.assertEqual(first["status"], 200)
+        self.assertEqual(second["status"], 429)
+
+        user_limited_settings = Settings(
+            database_path=str(self.database.path), cookie_secure=True,
+            chat_ip_rate_per_minute=100, chat_user_rate_per_minute=1,
+        )
+        user_limited = create_app(user_limited_settings, self.brain, self.database, OfflineSearch())
+        user_client = ASGIClient(user_limited); user_client.cookies.update(self.client.cookies)
+        first_for_user = user_client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
+        second_for_user = user_client.sync_request("POST", "/api/chat", {"message": "another hello"}, {"X-CSRF-Token": self.csrf})
+        self.assertEqual(first_for_user["status"], 200)
+        self.assertEqual(second_for_user["status"], 429)
+
+    def test_message_count_cap_stops_additional_turns(self):
+        capped_settings = Settings(database_path=str(self.database.path), cookie_secure=True, max_conversation_messages=2)
+        app = create_app(capped_settings, self.brain, self.database, OfflineSearch())
+        client = ASGIClient(app); client.cookies.update(self.client.cookies)
+        first = client.sync_request("POST", "/api/chat", {"message": "hello"}, {"X-CSRF-Token": self.csrf})
+        self.assertEqual(first["status"], 200)
+        conversation_id = client.sync_request("GET", "/api/conversations")["json"][0]["id"]
+        second = client.sync_request("POST", "/api/chat", {
+            "message": "another turn", "conversation_id": conversation_id,
+        }, {"X-CSRF-Token": self.csrf})
+        self.assertEqual(second["status"], 413)
 
 
 if __name__ == "__main__":
